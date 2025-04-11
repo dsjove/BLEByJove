@@ -9,8 +9,6 @@ import Foundation
 import Combine
 import CoreBluetooth
 
-// Invocations are expected on the main thread
-// Published vars happen on main thread
 public class BTDevice: NSObject, ObservableObject, BTControl, Identifiable {
 	private let peripheral : CBPeripheral?
 	private let makeConnection: (Bool) ->()
@@ -38,7 +36,9 @@ public class BTDevice: NSObject, ObservableObject, BTControl, Identifiable {
 		self.service = service
 		self.makeConnection = makeConnection
 		self.name =
-			(advertisementData["kCBAdvDataLocalName"] as? String ?? self.peripheral?.name) ?? service.name
+			(advertisementData["kCBAdvDataLocalName"] as? String ??
+			 self.peripheral?.name) ??
+			 service.name //TODO: add a counter
 		super.init()
 		peripheral.delegate = self
 	}
@@ -91,7 +91,7 @@ extension BTDevice: BTBroadcaster {
 		if let peripheral {
 			if let cb = self.characteristics[identity] {
 				if let confirmed = confirmed, cb.properties.contains(.write) {
-					//FUTURE: test
+					//TODO: test
 					confirmingWrites[identity] = confirmed
 					peripheral.writeValue(data, for: cb, type: .withResponse)
 				}
@@ -111,7 +111,7 @@ extension BTDevice: BTBroadcaster {
 				}
 			}
 			else {
-			// Mock write
+			// TODO: Mock write
 			}
 		}
 	}
@@ -143,7 +143,7 @@ extension BTDevice: BTBroadcaster {
 					peripheral.setNotifyValue(true, for: cb)
 				}
 			}
-			// request read?
+			//TODO: request read?
 		}
 		return AnyCancellable({self.distribute.removeValue(forKey: id)})
 	}
@@ -164,7 +164,7 @@ extension BTDevice {
 	}
 	
 	public func peripheralDisconnected(_ peripheral: CBPeripheral?, _ error: Error?) {
-		//FUTURE: do these auto error out?
+		//TODO: do these auto error out?
 //		confirmingWrites.forEach {
 //			$0.value(.error(?))
 //		}

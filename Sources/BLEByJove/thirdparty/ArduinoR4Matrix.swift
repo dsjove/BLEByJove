@@ -7,11 +7,9 @@
 
 import Foundation
 import Combine
-//import UIKit
-//import CoreImage
-//import CoreImage.CIFilterBuiltins
 
 public extension Array {
+	//TODO: make more efficient
 	mutating func shift(increment: Int = 1, fill: Element? = nil) {
 		if increment > 0 {
 			let r = (count-increment)..<count
@@ -127,47 +125,4 @@ public struct ArduinoR4Matrix: Equatable, BTSerializable {
 			}
 		}
 	}
-
-//	public mutating func convert(_ image: UIImage) {
-//		// Convert UIImage to CIImage
-//		guard let ciImage = CIImage(image: image) else { return }
-//
-//		// Create grayscale filter
-//		let filter = CIFilter.colorControls()
-//		filter.inputImage = ciImage
-//		filter.brightness = 0
-//		filter.contrast = 1
-//		filter.saturation = 0
-//
-//		// Resize the image
-//		let context = CIContext()
-//		let scaleFilter = CIFilter.lanczosScaleTransform()
-//		scaleFilter.inputImage = filter.outputImage
-//		scaleFilter.scale = Float(12) / Float(ciImage.extent.width)
-//		scaleFilter.aspectRatio = Float(rows) / Float(ciImage.extent.height)
-//
-//		guard let scaledImage = scaleFilter.outputImage else { return }
-//		guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return }
-//
-//		// Read pixel data
-//		let colorSpace = CGColorSpaceCreateDeviceGray()
-//		var pixelData = [UInt8](repeating: 0, count: columns * rows)
-//		let bitmapContext = CGContext(data: &pixelData,
-//									   width: columns,
-//									   height: rows,
-//									   bitsPerComponent: 8,
-//									   bytesPerRow: columns,
-//									   space: colorSpace,
-//									   bitmapInfo: CGImageAlphaInfo.none.rawValue)!
-//		bitmapContext.draw(cgImage, in: CGRect(x: 0, y: 0, width: columns, height: rows))
-//
-//		// Import
-//		for r in 0..<rows {
-//			for c in 0..<columns {
-//				let pixelValue = pixelData[r * columns + c]
-//				let value = pixelValue < 128 // Threshold for black-and-white
-//				grid[r][c] = value
-//			}
-//		}
-//	}
 }

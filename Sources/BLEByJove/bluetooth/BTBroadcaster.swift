@@ -21,7 +21,8 @@ public protocol BTBroadcaster: AnyObject {
 	func request(value: BTCharacteristicIdentity)
 	
 	func read(value: BTCharacteristicIdentity) -> Data?
-	
+
+	//TODO: either use a callback or make more like a combine Sink
 	func sink(id: CombineIdentifier, to characteristic: BTCharacteristicIdentity, with: @escaping (Data) ->()) -> AnyCancellable
 }
 

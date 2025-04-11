@@ -8,8 +8,14 @@
 import SwiftUI
 
 public struct ArduinoR4MatrixView: View {
+	public enum Interactive {
+		case none
+		case draw
+		case scroll
+	}
+
 	private var value: ArduinoR4Matrix
-	private var scroll: Bool?
+	private var interactive: Interactive
 	private let action: (ArduinoR4Matrix) -> Void
 
 	@State private var drawing: Bool?
@@ -19,13 +25,14 @@ public struct ArduinoR4MatrixView: View {
 
 	public init(
 		value: ArduinoR4Matrix,
-		scroll: Bool? = nil,
+		interactive: Interactive = .none,
 		action: @escaping (ArduinoR4Matrix) -> Void = { _ in}) {
 			self.value = value
-			self.scroll = scroll
+			self.interactive = interactive
 			self.action = action
 	}
 
+	//TODO: make prettier :-)
 	public var body: some View {
 		let columnCount = Double(value.columns)
 		let rowCount = Double(value.rows)
@@ -69,7 +76,7 @@ public struct ArduinoR4MatrixView: View {
 #if !os(tvOS)
 			.gesture(DragGesture(minimumDistance: 0)
 				.onChanged { drag in
-					if scroll == true {
+					if interactive == .scroll {
 						if let scrolling {
 							let dx = drag.location.x - scrolling.x
 							let dy = drag.location.y - scrolling.y
@@ -90,7 +97,7 @@ public struct ArduinoR4MatrixView: View {
 							scrolling = drag.location
 						}
 					}
-					else if (scroll != nil) {
+					else if interactive == .draw {
 						let c = Int(drag.location.x / w)
 						let r = Int(drag.location.y / w)
 						if (r < 0 || r >= value.rows || c < 0 || c >= value.columns) {
@@ -111,6 +118,8 @@ public struct ArduinoR4MatrixView: View {
 					drawing = nil
 					scrolling = nil
 				}))
+#else
+	//TODO: implement tvOS
 #endif
 		}
 		.opacity(isEnabled ? 1.0 : 0.5)
@@ -124,6 +133,6 @@ public struct ArduinoR4MatrixView: View {
 		a.fill(.random)
 		return a
 	}
-	ArduinoR4MatrixView(value: matrix(), scroll: nil, action: {_ in})
+	ArduinoR4MatrixView(value: matrix())
 		.background(Color.mint)
 }

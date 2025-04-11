@@ -16,6 +16,11 @@ public protocol ControlledProperty: Identifiable, ObservableObject {
 	var control: P { get set }
 	var feedback: P { get }
 
+	//TODO: implement
+	//var canWrite: Bool { get }
+	//var canRead: Bool { get }
+	//var hasNotify: Bool { get }
+
 	func reset()
 }
 

@@ -19,10 +19,10 @@ public class BTProperty<T: ValueTransforming>: TransformedProperty<T>
 			transfomer: T,
 			defaultValue: P = P()) {
 
-		//if characteristic supports write
+		//TODO: if characteristic supports write
 		let sendControl: ((M) -> M?)? = {
 			broadcaster.send(data: $0.pack(), to: controlChar)
-			return nil //if characteristic has notify
+			return nil //TODO: if characteristic has notify
 		}
 
 		super .init(
@@ -30,9 +30,11 @@ public class BTProperty<T: ValueTransforming>: TransformedProperty<T>
 			transfomer: transfomer,
 			defaultValue: defaultValue)
 
+		//TODO: if characteriastic supports read
 		if let data = broadcaster.read(value: feedbackChar), !data.isEmpty {
 			self.receiveFeedback(newFeedbackMomento: try? M(unpack: data))
 		}
+		//TODO: if characteristic has notify
 		self.sink = broadcaster.sink(id: id, to: feedbackChar) {data in
 			self.receiveFeedback(newFeedbackMomento: try? M(unpack: data))
 		}

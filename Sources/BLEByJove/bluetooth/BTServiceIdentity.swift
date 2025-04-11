@@ -79,6 +79,7 @@ public extension BTChannel {
 	}
 }
 
+//TODO: Combine with BTUARTChannel
 public enum BTPropChannel: UInt8, BTChannel {
 	case property = 0
 	case control = 1
@@ -97,14 +98,14 @@ public enum BTPropChannel: UInt8, BTChannel {
 }
 
 public enum BTUARTChannel: UInt8, BTChannel {
-	case main = 1
+	case duplex = 1
 	case tx = 2
 	case rx = 3
 
 	public var description: String {
 		switch self {
-		case .main:
-			return "Main"
+		case .duplex:
+			return "Duplex"
 		case .tx:
 			return "TX"
 		case .rx:

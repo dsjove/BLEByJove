@@ -5,17 +5,12 @@
 //  Created by David Giovannini on 3/24/25.
 //
 
-public extension ClosedRange {
+//TODO: I think this is built in now
+extension ClosedRange {
 	func clamp(_ value : Bound) -> Bound {
 		self.lowerBound > value ? self.lowerBound :
 		self.upperBound < value ? self.upperBound :
 		value
-	}
-}
-
-public extension Double {
-	func isEquivelent(_ b: Double, epsilon: Double = 1e-10) -> Bool {
-		abs(self - b) < epsilon
 	}
 }
 

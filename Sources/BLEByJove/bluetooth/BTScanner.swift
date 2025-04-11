@@ -33,13 +33,11 @@ extension CBManagerAuthorization {
 	}
 }
 
-// Invocations are expected on the main thread
 public final class BTScanner: NSObject {
 	private let centralManager : CBCentralManager
 	private var wantScan: [BTServiceIdentity]?
 	private var scanning: Bool = false
 	
-	// delegate calls happen on the main thread
 	public weak var delegate: BTScannerDelegate?
 
 	public override init() {

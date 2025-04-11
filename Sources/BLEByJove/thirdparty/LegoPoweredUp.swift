@@ -6,6 +6,8 @@
 //
 
 import Foundation
+
+//TODO: implement
 /*
 
 https://lego.github.io/lego-ble-wireless-protocol-docs/

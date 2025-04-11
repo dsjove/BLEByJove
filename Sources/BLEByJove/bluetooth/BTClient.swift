@@ -9,8 +9,6 @@ import Foundation
 import Combine
 import CoreBluetooth
 
-// Invocations are expected on the main thread
-// Published vars happen on main thread
 public final class BTClient: ObservableObject {
 	private let scanner: BTScanner
 	private let services: [BTServiceIdentity]

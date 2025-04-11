@@ -8,13 +8,6 @@
 import Foundation
 import Combine
 
-/*
-// https://github.com/asperka/LEGORemoteCircuitCube
-string CIRCUIT_CUBE_SERVICE_UUID		   = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
-string CIRCUIT_CUBE_TX_CHRACTERISITCS_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
-string CIRCUIT_CUBE_RX_CHRACTERISITCS_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
-*/
-
 public final actor CircuitCube {
 	private struct Component: BTComponent {
 		public let rawValue: UInt8 = 0x6e
@@ -31,7 +24,7 @@ public final actor CircuitCube {
 			component: Component(),
 			category: Category(),
 			subCategory: EmptySubCategory(),
-			channel: BTUARTChannel.main),
+			channel: BTUARTChannel.duplex),
 		identifier: "b5a3f393e0a9e50e24dcca9e".sbjHexToData()!,
 		name: "Circuit Cube")
 
@@ -81,6 +74,7 @@ public final actor CircuitCube {
 		}
 	}
 
+	//TODO: only works sometimes
 	public func name() async -> String {
 		let cmd = "n?"
 		let name = await uart.call(cmd.data(using: String.Encoding.ascii)) { data in
@@ -96,6 +90,7 @@ public final actor CircuitCube {
 		return name ?? "" //self.device.name
 	}
 
+	//TODO: Does not work
 	public func name(set name: String = "") async -> Bool {
 		let allowed = name.safeName()
 		if allowed.isEmpty {
@@ -104,6 +99,7 @@ public final actor CircuitCube {
 		DispatchQueue.main.async {
 			self.device.name = allowed
 		}
+		//Conflicting docs with the '='
 		let cmd = "n=\(allowed)\r\n"
 		let result = await uart.call(cmd.data(using: String.Encoding.ascii), timeout: 100) { $0 }
 		let success = (result?.first ?? 1) == 0
