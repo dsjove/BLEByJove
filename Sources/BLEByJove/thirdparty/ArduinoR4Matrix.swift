@@ -125,4 +125,16 @@ public struct ArduinoR4Matrix: Equatable, BTSerializable {
 			}
 		}
 	}
+
+	public func export(name: String) -> String {
+		let data = self.pack()
+		var uint32Array = [UInt32]()
+		data.withUnsafeBytes { rawBufferPointer in
+			let bufferPointer = rawBufferPointer.bindMemory(to: UInt32.self)
+			uint32Array = bufferPointer.map { $0 }
+		}
+		let elements = uint32Array.map { "0x" + String(format: "%08x", $0) }.joined(separator: ", ")
+		let cArrayString = "const uint32_t array[] = { \(elements) };\n"
+		return cArrayString
+	}
 }

@@ -18,4 +18,11 @@ final class ArduinoR4MatrixTests: XCTestCase {
 		let display2 = try? ArduinoR4Matrix(unpack: packed)
 		XCTAssertEqual(display, display2)
 	}
+
+	func testExport() {
+		var display = ArduinoR4Matrix()
+		display.fill(.random)
+		let ccode = display.export(name: "test")
+		print(ccode);
+	}
 }

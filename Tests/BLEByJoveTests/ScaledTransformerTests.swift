@@ -8,6 +8,12 @@
 import XCTest
 @testable import BLEByJove
 
+extension Double {
+	func isEquivelent(_ b: Double, tolerance: Double = 1e-10) -> Bool {
+		return abs(self - b) <= tolerance
+	}
+}
+
 final class ScaledTransformerTests: XCTestCase {
 	func testSignedUpper() {
 		let st = ScaledTransformer<Int8>(10)
@@ -63,3 +69,4 @@ final class ScaledTransformerTests: XCTestCase {
 		XCTAssertEqual(m, 0)
 	}
 }
+
