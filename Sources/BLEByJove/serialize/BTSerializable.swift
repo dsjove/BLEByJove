@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Network
 
 public protocol DefaultInitializable {
 	init()
@@ -99,6 +100,28 @@ extension Bool: BTSerializable {
 	
 	public func pack(btData data: inout Data) {
 		UInt8(self ? 1 : 0).pack(btData: &data)
+	}
+}
+
+extension IPv4Address : BTSerializable {
+	public init() {
+		self.init("0.0.0.0")!
+	}
+	
+	public var packedSize: Int {
+		4
+	}
+
+	public func pack(btData data: inout Data) {
+		data.append(rawValue);
+	}
+	
+	public init(unpack data: Data, _ cursor: inout Int) throws {
+		guard let instance = IPv4Address(data) else {
+			throw BTSerializeError.invalidDataLength
+		}
+		self = instance
+		cursor += packedSize;
 	}
 }
 
