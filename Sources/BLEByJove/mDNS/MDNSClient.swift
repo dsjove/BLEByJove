@@ -2,19 +2,27 @@ import Network
 import Foundation
 import Combine
 
-public class MDNSDevice {
-	public var service: String
+public class MDNSDevice: ObservableObject, DeviceIdentifiable {
+	public let service: String
 	public let id: UUID
 	public let endpoint: NWEndpoint
 
-	public init(service: String, endpoint: NWEndpoint) {
+	public init(service: String, endpoint: NWEndpoint, name: String) {
 		self.service = service
 		self.id = UUID()
 		self.endpoint = endpoint
+		self.name = name
 	}
 
-	public var name: String = ""
-	public var advertisedData: String = ""
+	public convenience init(preview: String) {
+		self.init(
+			service: preview,
+			endpoint: NWEndpoint.service(name: preview, type: preview, domain: "", interface: nil),
+			name: preview)
+	}
+
+	@Published public var name: String = ""
+	@Published public var advertisedData: String = ""
 }
 
 public class MDNSClient: ObservableObject {
@@ -88,7 +96,7 @@ public class MDNSClient: ObservableObject {
 					advertisedData = text
 				} else {
 					advertisedData = data.map { String(format: "%02x", $0) }
-						.joined(separator: " ")
+						.joined(separator: "")
 				}
 			}
 			DispatchQueue.main.async {
@@ -100,8 +108,8 @@ public class MDNSClient: ObservableObject {
 					if case let NWEndpoint.service(service, type, _, _) = endpoint {
 						let device = MDNSDevice(
 							service: service,
-							endpoint: endpoint)
-						device.name = name
+							endpoint: endpoint,
+							name: name)
 						device.advertisedData = advertisedData
 					}
 				}

@@ -9,7 +9,18 @@ import Foundation
 import Combine
 import CoreBluetooth
 
-public class BTDevice: NSObject, ObservableObject, BTControl, Identifiable {
+public protocol DeviceIdentifiable: ObservableObject, Identifiable {
+	var id: UUID { get }
+	var name: String { get }
+}
+
+public enum ConnectionState: String {
+	case disconnected
+	case connecting
+	case connected
+}
+
+public class BTDevice: NSObject, ObservableObject, DeviceIdentifiable {
 	private let peripheral : CBPeripheral?
 	private let makeConnection: (Bool) ->()
 
