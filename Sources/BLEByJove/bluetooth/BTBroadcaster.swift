@@ -15,7 +15,7 @@ public enum BTBroadcasterWriteResponse {
 	case error(Error)
 }
 
-public protocol BTBroadcaster: AnyObject {
+public protocol BTBroadcaster {
 	func send(data: Data, to value: BTCharacteristicIdentity, confirmed: ((BTBroadcasterWriteResponse) ->())?)
 	
 	func request(value: BTCharacteristicIdentity)
@@ -48,16 +48,4 @@ public final class NullBTBroadcaster: BTBroadcaster {
 	public func sink(id: CombineIdentifier, to characteristic: BTCharacteristicIdentity, with: @escaping (Data) -> ()) -> AnyCancellable {
 		AnyCancellable({})
 	}
-}
-
-public enum ConnectionState: String {
-	case disconnected
-	case connecting
-	case connected
-}
-
-public protocol BTControl: AnyObject {
-	var connectionState: ConnectionState { get }
-	func connect()
-	func disconnect()
 }
