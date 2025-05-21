@@ -29,15 +29,15 @@ public class MDNSClient: ObservableObject {
 	private let browsers: [NWBrowser]
 	private var known: [NWEndpoint: MDNSDevice] = [:] {
 		didSet {
-			services = known.values.sorted { $0.name < $1.name }
+			devices = known.values.sorted { $0.name < $1.name }
 		}
 	}
 
-	public init(serviceTypes: [String]) {
-		browsers = serviceTypes.map { type in
+	public init(services: [String]) {
+		browsers = services.map { type in
 			let parameters = NWParameters()
 			parameters.includePeerToPeer = true
-			return NWBrowser(for: .bonjour(type: type, domain: nil), using: parameters)
+			return NWBrowser(for: .bonjour(type: "_\(type)._tcp", domain: nil), using: parameters)
 		}
 
 		for browser in browsers {
@@ -56,7 +56,7 @@ public class MDNSClient: ObservableObject {
 		}
 	}
 
-	@Published public private(set) var services: [MDNSDevice] = []
+	@Published public private(set) var devices: [MDNSDevice] = []
 
 	private func handleBrowserStateChange(browser: NWBrowser, newState: NWBrowser.State) {
 		print("Browser \(browser) changed state to: \(newState)")
@@ -79,6 +79,7 @@ public class MDNSClient: ObservableObject {
 	}
 
 	private func resolveService(endpoint: NWEndpoint, name: String) {
+		discoverDevice(endpoint: endpoint, name: name, advertisedData: "")
 		let connection = NWConnection(to: endpoint, using: NWParameters())
 		connection.stateUpdateHandler = { [weak self] newState in
 			if case .ready = newState {
@@ -88,6 +89,28 @@ public class MDNSClient: ObservableObject {
 		connection.start(queue: DispatchQueue.global())
 	}
 
+	fileprivate func discoverDevice(endpoint: NWEndpoint, name: String, advertisedData: String) {
+		DispatchQueue.main.async {
+			if let existing = self.known[endpoint] {
+				existing.name = name
+				existing.advertisedData = advertisedData
+			}
+			else {
+				if case let NWEndpoint.service(_, type, _, _) = endpoint {
+					let startIndex = type.index(type.startIndex, offsetBy: 1) // Constant index
+					let endIndex = type.firstIndex(of: ".")!
+					let service = type[startIndex..<endIndex] // Extract substring
+					let device = MDNSDevice(
+						service: String(service),
+						endpoint: endpoint,
+						name: name)
+					device.advertisedData = advertisedData
+					self.known[endpoint] = device
+				}
+			}
+		}
+	}
+	
 	private func fetchAdvertisedData(connection: NWConnection, endpoint: NWEndpoint, name: String) {
 		connection.receive(minimumIncompleteLength: 0, maximumLength: 1024) { data, _, _, _ in
 			var advertisedData = ""
@@ -99,21 +122,7 @@ public class MDNSClient: ObservableObject {
 						.joined(separator: "")
 				}
 			}
-			DispatchQueue.main.async {
-				if let existing = self.known[endpoint] {
-					existing.name = name
-					existing.advertisedData = advertisedData
-				}
-				else {
-					if case let NWEndpoint.service(service, type, _, _) = endpoint {
-						let device = MDNSDevice(
-							service: service,
-							endpoint: endpoint,
-							name: name)
-						device.advertisedData = advertisedData
-					}
-				}
-			}
+			self.discoverDevice(endpoint: endpoint, name: name, advertisedData: advertisedData)
 			connection.cancel()
 		}
 	}
