@@ -59,7 +59,7 @@ public class MDNSClient: ObservableObject {
 	@Published public private(set) var devices: [MDNSDevice] = []
 
 	private func handleBrowserStateChange(browser: NWBrowser, newState: NWBrowser.State) {
-		print("Browser \(browser) changed state to: \(newState)")
+		//print("Browser \(browser) changed state to: \(newState)")
 	}
 
 	private func handleBrowseResultsChange(results: Set<NWBrowser.Result>) {
@@ -97,9 +97,9 @@ public class MDNSClient: ObservableObject {
 			}
 			else {
 				if case let NWEndpoint.service(_, type, _, _) = endpoint {
-					let startIndex = type.index(type.startIndex, offsetBy: 1) // Constant index
+					let startIndex = type.index(type.startIndex, offsetBy: 1)
 					let endIndex = type.firstIndex(of: ".")!
-					let service = type[startIndex..<endIndex] // Extract substring
+					let service = type[startIndex..<endIndex]
 					let device = MDNSDevice(
 						service: String(service),
 						endpoint: endpoint,

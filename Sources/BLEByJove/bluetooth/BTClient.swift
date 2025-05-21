@@ -12,8 +12,7 @@ import CoreBluetooth
 public final class BTClient: ObservableObject {
 	private let scanner: BTScanner
 	private let services: [BTServiceIdentity]
-	private var mocking: [BTDevice] = []
-	
+
 	private var known: [UUID: BTDevice] = [:] {
 		didSet {
 			self.devices = self.known.values.sorted {
@@ -24,33 +23,16 @@ public final class BTClient: ObservableObject {
 	
 	@Published public private(set) var devices: [BTDevice] = []
 	
-	public init(services: [BTServiceIdentity], mocking: Bool = false) {
+	public init(services: [BTServiceIdentity]) {
 		self.scanner = BTScanner()
 		self.services = services
 		scanner.delegate = self
-		self.mocking = !mocking ? [] : self.services.map {
-			let id = UUID()
-			return BTDevice(name: nil, deviceID: id, service: $0) {
-				if $0 {
-					self.known[id]?.peripheralConnected(nil)
-				}
-				else {
-					self.known[id]?.peripheralDisconnected(nil, nil)
-				}
-			}
-		}
 	}
 	
 	@Published public var scanning: Bool = false {
 		didSet {
 			if scanning {
 				self.scanner.startScan(services: services)
-				for mock in mocking {
-					let existing = self.known[mock.id]
-					if existing == nil {
-						self.known[mock.id] = mock
-					}
-				}
 			}
 			else {
 				self.scanner.stopScan()
