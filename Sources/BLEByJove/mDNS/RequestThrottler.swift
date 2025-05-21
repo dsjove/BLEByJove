@@ -29,8 +29,8 @@ public class RequestThrottler {
 		queue.async {
 			let now = Date()
 			if let lastTime = self.lastRequestTime, now.timeIntervalSince(lastTime) < 1.0 {
-				if let pendingRequestCompletion = completion {
-					completion?(.dropped)
+				if let completion = self.pendingRequest?.1 {
+					completion(.dropped)
 				}
 				self.pendingRequest = (request, completion)
 				return
@@ -51,14 +51,16 @@ public class RequestThrottler {
 
 	private func execute(_ request: URLRequest, _ completion: ((RequestResult) -> Void)?) {
 		URLSession.shared.dataTask(with: request) { data, response, error in
-			if let error = error {
-				completion?(.failure(error))
-			}
-			else if let data = data {
-				completion?(.success(data))
-			}
-			else {
-				completion?(.dropped)
+			if let completion = completion {
+				if let error = error {
+					completion(.failure(error))
+				}
+				else if let data = data {
+					completion(.success(data))
+				}
+				else {
+					completion(.dropped)
+				}
 			}
 		}.resume()
 	}
