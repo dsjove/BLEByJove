@@ -125,6 +125,41 @@ extension IPv4Address : BTSerializable {
 	}
 }
 
+public struct CountedBytes: Equatable, BTSerializable, CustomStringConvertible {
+	public var id: Data
+	public var packedSize: Int { id.count + 1 }
+
+	public init() {
+		self.id = Data()
+	}
+
+	public init(id: Data) {
+		self.id = id
+	}
+
+	public init(unpack data: Data, _ cursor: inout Int) throws {
+		let count = Int(try UInt8(unpack: data, &cursor))
+		guard data.count >= cursor + count else {
+			throw BTSerializeError.invalidDataLength
+		}
+		id = data.subdata(in: cursor..<(cursor + count))
+		cursor += count
+	}
+
+	public func pack(btData data: inout Data) {
+		UInt8(packedSize).pack(btData: &data)
+		data.append(contentsOf: id)
+	}
+
+	public var isZero: Bool {
+		id.isEmpty || id.allSatisfy({ $0 == .zero })
+	}
+
+	public var description: String {
+		isZero ? "" : id.sbjHexFormat(bytesPerRow: 128)
+	}
+}
+
 public extension BTUnpackable where Self: RawRepresentable, Self.RawValue: BTUnpackable {
 	init(unpack data: Data, _ cursor: inout Int) throws {
 		let value = try Self.RawValue(unpack: data, &cursor)

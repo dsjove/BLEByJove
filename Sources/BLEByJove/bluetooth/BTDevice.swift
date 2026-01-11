@@ -129,6 +129,7 @@ extension BTDevice: BTBroadcaster {
 	
 	public func read(value: BTCharacteristicIdentity) -> Data? {
 		let identity = service.characteristic(characteristic: value).uuidString
+		//print("registering: \(identity)")
 		if let cb = self.characteristics[identity] {
 			return cb.value
 		}
