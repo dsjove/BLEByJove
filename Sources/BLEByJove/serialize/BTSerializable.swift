@@ -125,7 +125,7 @@ extension IPv4Address : BTSerializable {
 	}
 }
 
-public struct CountedBytes: Equatable, BTSerializable, CustomStringConvertible {
+public struct CountedBytes: Equatable, Hashable, BTSerializable, CustomStringConvertible {
 	public var id: Data
 	public var packedSize: Int { id.count + 1 }
 

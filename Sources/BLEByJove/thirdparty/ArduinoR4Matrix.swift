@@ -86,17 +86,24 @@ public struct ArduinoR4Matrix: Equatable, BTSerializable {
 		}
 	}
 
-	public let packedSize = 12
+	public var packedSize: Int {
+		Self.packedSize
+	}
+	
+	public static var packedSize: Int {
+		12
+	}
+	
+	public static var packedCount: Int {
+		3
+	}
 
-	public init(unpack data: Data, _ cursor: inout Int) throws {
-		if data.count < packedSize {
-			throw BTSerializeError.invalidDataLength
-		}
+	private init(fetchChunk: (Int) throws -> UInt32) rethrows {
 		var result: [[Bool]] = Array(repeating: Array<Bool>(repeating: false, count: columns), count: rows)
 		var r = 0
 		var c = 0
-		for _ in 0..<3 {
-			let chunk = try UInt32(unpack: data, &cursor)
+		for i in 0..<3 {
+			let chunk = try fetchChunk(i)
 			for bitCounter in 0..<32 {
 				let value = ((chunk >> (31 - bitCounter)) & 0x00000001) != 0
 				result[r][c] = value
@@ -108,6 +115,32 @@ public struct ArduinoR4Matrix: Equatable, BTSerializable {
 			}
 		}
 		grid = result
+	}
+
+	public init(unpack data: Data, _ cursor: inout Int) throws {
+		if data.count < ArduinoR4Matrix.packedSize { throw BTSerializeError.invalidDataLength }
+		var localCursor = cursor
+		try self.init { _ in
+			try UInt32(unpack: data, &localCursor)
+		}
+		cursor = localCursor
+	}
+
+	public init(packed: [UInt32]) throws {
+		if packed.count < ArduinoR4Matrix.packedCount { throw BTSerializeError.invalidDataLength }
+		try self.init { packed[$0] }
+	}
+
+	public init(packed: [String]) throws {
+		if packed.count < ArduinoR4Matrix.packedCount { throw BTSerializeError.invalidDataLength }
+		let words: [UInt32] = try packed.prefix(ArduinoR4Matrix.packedCount).map { hex in
+			let cleaned = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+			guard let value = UInt32(cleaned, radix: 16) else {
+				throw BTSerializeError.invalidRawValue
+			}
+			return value
+		}
+		try self.init { words[$0] }
 	}
 
 	public func pack(btData data: inout Data) {
@@ -126,7 +159,7 @@ public struct ArduinoR4Matrix: Equatable, BTSerializable {
 		}
 	}
 
-	public func export(name: String) -> String {
+	public func exportCPP(name: String) -> String {
 		let data = self.pack()
 		var uint32Array = [UInt32]()
 		data.withUnsafeBytes { rawBufferPointer in
@@ -137,4 +170,29 @@ public struct ArduinoR4Matrix: Equatable, BTSerializable {
 		let cArrayString = "const std::array<uint32_t, 3> \(name) = {\(elements)};\n"
 		return cArrayString
 	}
+
+	public func exportSwift(name: String) -> String {
+		let data = self.pack()
+		var uint32Array = [UInt32]()
+		data.withUnsafeBytes { rawBufferPointer in
+			let bufferPointer = rawBufferPointer.bindMemory(to: UInt32.self)
+			uint32Array = bufferPointer.map { $0 }
+		}
+		let elements = uint32Array.map { "0x" + String(format: "%08x", $0) }.joined(separator: ", ")
+		let swiftArrayString = "let \(name): [UInt32] = [\(elements)]\n"
+		return swiftArrayString
+	}
+
+	public func exportJSON(name: String) -> String {
+		let data = self.pack()
+		var uint32Array = [UInt32]()
+		data.withUnsafeBytes { rawBufferPointer in
+			let bufferPointer = rawBufferPointer.bindMemory(to: UInt32.self)
+			uint32Array = bufferPointer.map { $0 }
+		}
+		let elements = uint32Array.map { "\"\(String(format: "%08x", $0))\"" }.joined(separator: ", ")
+		let swiftArrayString = "\"\(name)\" : [\(elements)]\n"
+		return swiftArrayString
+	}
 }
+

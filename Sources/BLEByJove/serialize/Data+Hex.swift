@@ -28,38 +28,6 @@ public extension Data {
 		desc.0.removeLast()
 		return desc.0
 	}
-
-	func sbjUnpackVariableSizedInteger(from data: Data) -> UInt64? {
-		var value: UInt64 = 0
-		var shift: UInt64 = 0
-
-		for byte in data {
-			let maskedByte = UInt64(byte & 0x7F) // Extract the last 7 bits
-			value |= maskedByte << shift
-			shift += 7
-			if (byte & 0x80) == 0 { // Check continuation bit
-				return value
-			}
-		}
-		return nil // Return nil if data is incomplete
-	}
-
-	func sbjPackVariableSizedInteger(_ value: UInt64) -> Data {
-		var encodedData = Data()
-		var tempValue = value
-
-		// Encode using VLQ (Variable-length Quantity)
-		repeat {
-			var byte = UInt8(tempValue & 0x7F) // Take the last 7 bits
-			tempValue >>= 7 // Shift right by 7 bits
-			if tempValue != 0 {
-				byte |= 0x80 // Set the continuation bit
-			}
-			encodedData.append(byte)
-		} while tempValue != 0
-
-		return encodedData
-	}
 }
 
 public extension String {
