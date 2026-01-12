@@ -109,6 +109,10 @@ extension IPv4Address : BTSerializable {
 	}
 	
 	public var packedSize: Int {
+		IPv4Address.packedSize
+	}
+	
+	public static var packedSize: Int {
 		4
 	}
 
