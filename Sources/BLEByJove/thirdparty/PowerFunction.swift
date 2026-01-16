@@ -1,8 +1,8 @@
 //
-//  LEGOPowerFunctions.swift
+//  PowerFunction.swift
 //  BLEByJove
 //
-//  Created by David Giovannini on 1/14/26.
+//  Created by David Giovannini on 1/16/26.
 //
 import Foundation
 
@@ -46,5 +46,17 @@ public struct PFCommand: Hashable, Equatable, BTSerializable {
 		channel.pack(btData: &data)
 		port.pack(btData: &data)
 		power.pack(btData: &data)
+	}
+}
+
+public final actor PowerFunction {
+	private let device: BTDevice
+
+	public var id: UUID {
+		device.id
+	}
+
+	public init(device: BTDevice) {
+		self.device = device
 	}
 }
