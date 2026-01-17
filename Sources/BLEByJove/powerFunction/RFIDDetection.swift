@@ -1,13 +1,6 @@
-//
-//  RFIDDetection.swift
-//  Infrastructure
-//
-//  Created by David Giovannini on 1/12/26.
-//
-
 import Foundation
 
-public struct RFIDDetection: Equatable, Hashable, BTSerializable {
+public struct RFIDDetection: Equatable, Hashable, Codable, BTSerializable, CustomStringConvertible {
 	public let reader: UInt32
 	public let timestampMS: UInt32
 	public let id: CountedBytes
@@ -15,7 +8,11 @@ public struct RFIDDetection: Equatable, Hashable, BTSerializable {
 	public var packedSize: Int {
 		reader.packedSize + timestampMS.packedSize + id.packedSize
 	}
-	
+
+	public var description: String {
+		"\(reader)-\(timestampMS)-\(id)"
+	}
+
 	public init() {
 		self.reader = 0
 		self.timestampMS = 0
