@@ -9,19 +9,28 @@ import Foundation
 import Combine
 import CoreBluetooth
 
-public final class BTClient: DeviceScanner, ObservableObject {
+@Observable
+public final class BTClient: DeviceScanner {
 	private let scanner: BTScanner
 	private let services: [BTServiceIdentity]
 
-	private var known: [UUID: BTDevice] = [:] {
-		didSet {
-			self.devices = self.known.values.sorted {
-				$0.name < $1.name
-			}
-		}
-	}
+	private var known: [UUID: BTDevice] = [:]
+
+	public private(set) var devices: [BTDevice] = []
 	
-	@Published public private(set) var devices: [BTDevice] = []
+	private func publishDevices() {
+		self.devices = self.known.values.sorted { $0.name < $1.name }
+	}
+
+	private func upsertKnown(_ device: BTDevice, for id: UUID) {
+		self.known[id] = device
+		self.publishDevices()
+	}
+
+	private func removeKnown(for id: UUID) {
+		self.known.removeValue(forKey: id)
+		self.publishDevices()
+	}
 	
 	public init(services: [BTServiceIdentity]) {
 		self.scanner = BTScanner()
@@ -29,7 +38,7 @@ public final class BTClient: DeviceScanner, ObservableObject {
 		scanner.delegate = self
 	}
 	
-	@Published public var scanning: Bool = false {
+	public var scanning: Bool = false {
 		didSet {
 			if scanning {
 				self.scanner.startScan(services: services)
@@ -42,16 +51,15 @@ public final class BTClient: DeviceScanner, ObservableObject {
 
 	public func removeDevice(_ device: BTDevice) {
 		device.disconnect()
-		known.removeValue(forKey: device.id)
+		removeKnown(for: device.id)
 	}
 }
 
 extension BTClient: BTScannerDelegate {
 	public func peripheralDiscovered(_ peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
 		let existing = self.known[peripheral.identifier]
-		if existing == nil {
-			let device = self.create(peripheral, advertisementData)
-			self.known[peripheral.identifier] = device
+		if existing == nil, let device = self.create(peripheral, advertisementData) {
+			self.upsertKnown(device, for: peripheral.identifier)
 		}
 	}
 

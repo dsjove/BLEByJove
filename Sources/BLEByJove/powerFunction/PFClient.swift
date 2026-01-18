@@ -1,13 +1,13 @@
 import Foundation
-import Combine
 
-public class PFClient: DeviceScanner, ObservableObject {
+@Observable
+public class PFClient: DeviceScanner {
 	private let knownDevices: [Data: PFMeta]
 	private let transmit: (PFCommand) -> Void
 	private var timeoutTimer: Timer?
 
-	@Published public private(set) var devices: [PFDevice] = []
-	@Published public var scanning: Bool = true
+	public private(set) var devices: [PFDevice] = []
+	public var scanning: Bool = false
 
 	public init(knownDevices: [PFMeta], transmit: @escaping (PFCommand) -> Void) {
 		self.knownDevices = Dictionary(uniqueKeysWithValues: knownDevices.map { ($0.id, $0) })
@@ -26,6 +26,7 @@ public class PFClient: DeviceScanner, ObservableObject {
 	}
 
 	public func detected(id: Data) -> Bool {
+		guard !scanning else { return false }
 		if let index = devices.firstIndex(where: { $0.info.id == id }) {
 			devices[index].ping()
 			return true

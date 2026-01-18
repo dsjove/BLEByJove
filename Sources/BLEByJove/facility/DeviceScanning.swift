@@ -22,5 +22,3 @@ public extension DeviceScanner {
 		devices.map { $0 as any DeviceIdentifiable }
 	}
 }
-
-

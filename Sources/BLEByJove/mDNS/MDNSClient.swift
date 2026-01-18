@@ -1,8 +1,8 @@
 import Network
 import Foundation
-import Combine
 
-public class MDNSClient: DeviceScanner, ObservableObject {
+@Observable
+public class MDNSClient: DeviceScanner {
 	private let browsers: [NWBrowser]
 	private var known: [NWEndpoint: MDNSDevice] = [:] {
 		didSet {
@@ -27,13 +27,13 @@ public class MDNSClient: DeviceScanner, ObservableObject {
 		}
 	}
 
-	@Published public var scanning: Bool = false {
+	public var scanning: Bool = false {
 		didSet {
 			scanning ? startScanning() : stopScanning()
 		}
 	}
 
-	@Published public private(set) var devices: [MDNSDevice] = []
+	public private(set) var devices: [MDNSDevice] = []
 
 	private func handleBrowserStateChange(browser: NWBrowser, newState: NWBrowser.State) {
 		//print("Browser \(browser) changed state to: \(newState)")
