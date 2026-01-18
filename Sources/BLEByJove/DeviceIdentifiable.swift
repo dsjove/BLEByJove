@@ -17,13 +17,16 @@ public protocol DeviceIdentifiable: Identifiable {
 
 // MARK: - DeviceScanning / DeviceScanner
 
-protocol DeviceScanning: AnyObject {
+public protocol DeviceScanning: AnyObject {
 	var scanning: Bool { get set }
+}
+
+protocol DeviceScanning2: DeviceScanning {
 	func snapshotDevices() -> [any DeviceIdentifiable]
 	func startObservingDevices(onChange: @escaping () -> Void)
 }
 
-protocol DeviceScanner: DeviceScanning {
+protocol DeviceScanner: DeviceScanning2 {
 	associatedtype Device: DeviceIdentifiable
 	var devices: [Device] { get }
 }
@@ -49,20 +52,14 @@ extension DeviceScanner {
 
 // MARK: - Facility
 
-struct FacilityCategory: Hashable, Sendable {
+public struct FacilityCategory: Hashable, Sendable {
 	let rawValue: String
 	public init(_ rawValue: String) {
 		self.rawValue = rawValue
 	}
 }
 
-extension FacilityCategory {
-	static let demo = FacilityCategory("demo")
-	static let pump = FacilityCategory("pump")
-	static let lighting = FacilityCategory("lighting")
-}
-
-protocol Facility: Identifiable {
+public protocol Facility: Identifiable {
 	var id: UUID { get }
 
 	var category: FacilityCategory { get }
@@ -79,7 +76,7 @@ protocol Facility: Identifiable {
 	var battery: Double? { get }
 }
 
-extension Facility {
+public extension Facility {
 	var heartBeat: Int { connectionState == .connected ? 0 : -1 }
 
 	var battery: Double? { nil }
@@ -88,7 +85,7 @@ extension Facility {
 // MARK: - FacilityFactory
 
 @Observable
-final class FacilityFactory {
+final class FacilityRepository{
 	private let facilitiesForDevice: (any DeviceIdentifiable) -> [any Facility]
 	private var facilitiesByDeviceID: [UUID: [any Facility]] = [:]
 
@@ -99,7 +96,7 @@ final class FacilityFactory {
 		self.facilitiesForDevice = facilitiesForDevice
 	}
 
-	public func addScanner(_ scanner: any DeviceScanning) {
+	public func addScanner(_ scanner: any DeviceScanning2) {
 		scanners.append(scanner)
 		sync(from: scanner)
 		scanner.startObservingDevices { [weak self, weak scanner] in
@@ -114,7 +111,7 @@ final class FacilityFactory {
 		}
 	}
 
-	private func sync(from scanner: any DeviceScanning) {
+	private func sync(from scanner: any DeviceScanning2) {
 		let devices = scanner.snapshotDevices()
 		let currentIDs = Set(devices.map(\.id))
 		// Add new devices
@@ -137,15 +134,6 @@ final class FacilityFactory {
 			}
 			return $0.id.uuidString < $1.id.uuidString
 		}
-	}
-}
-
-extension FacilityFactory {
-	func transmit(cmd: PFCommand) {
-		facilities
-			.lazy
-			.compactMap { $0 as? PowerFunctionsRemote }
-			.first?.transmit(cmd: cmd)
 	}
 }
 
@@ -195,6 +183,12 @@ final class DemoScanner: DeviceScanner {
 
 // MARK: - Example Facility implementation
 
+extension FacilityCategory {
+	static let demo = FacilityCategory("demo")
+	static let pump = FacilityCategory("pump")
+	static let lighting = FacilityCategory("lighting")
+}
+
 @Observable
 final class DemoFacility: Facility {
 	let id: UUID
@@ -219,7 +213,7 @@ final class DemoFacility: Facility {
 
 // MARK: - Wiring example
 func sample() {
-	let factory = FacilityFactory { device in
+	let factory = FacilityRepository { device in
 		[DemoFacility(name: "Facility for \(device.name)", battery: 0.75)]
 	}
 	factory.addScanner(DemoScanner())

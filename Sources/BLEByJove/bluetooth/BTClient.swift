@@ -9,7 +9,7 @@ import Foundation
 import Combine
 import CoreBluetooth
 
-public final class BTClient: ObservableObject {
+public final class BTClient: DeviceScanning, ObservableObject {
 	private let scanner: BTScanner
 	private let services: [BTServiceIdentity]
 
