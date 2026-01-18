@@ -51,7 +51,7 @@ public protocol PowerFunctionsRemote {
 }
 
 extension FacilityRepository: PowerFunctionsRemote {
-	func transmit(cmd: PFCommand) {
+	public func transmit(cmd: PFCommand) {
 		facilities
 			.lazy
 			.compactMap { $0 as? PowerFunctionsRemote }
