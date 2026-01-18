@@ -6,9 +6,10 @@
 //
 
 import Foundation
+import Observation
 import Combine
 
-public protocol ControlledProperty: Identifiable, ObservableObject {
+public protocol ControlledProperty: Identifiable, AnyObject {
 	associatedtype P
 	
 	var id: CombineIdentifier { get }
@@ -24,6 +25,7 @@ public protocol ControlledProperty: Identifiable, ObservableObject {
 	func reset()
 }
 
+@Observable
 public class TransformedProperty<T: ValueTransforming>: ControlledProperty {
 	public typealias P = T.P
 	public typealias M = T.M
@@ -47,14 +49,12 @@ public class TransformedProperty<T: ValueTransforming>: ControlledProperty {
 		self.feedback = defaultValue
 	}
 
-	@Published
 	public var control: P {
 		didSet {
 			issueControl(oldValue)
 		}
 	}
-	
-	@Published
+
 	public private(set) var feedback: P
 
 	public func reset() {

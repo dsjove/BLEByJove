@@ -1,91 +1,16 @@
+//
+//  FacilityRepository.swift
+//  BLEByJove
+//
+//  Created by David Giovannini on 1/18/26.
+//
+
 import Foundation
 import Observation
 import SBJKit
 
-// MARK: - DeviceIdentifiable
-
-public enum ConnectionState: String {
-	case disconnected
-	case connecting
-	case connected
-}
-
-public protocol DeviceIdentifiable: Identifiable {
-	var id: UUID { get }
-	var name: String { get }
-}
-
-// MARK: - DeviceScanning / DeviceScanner
-
-public protocol DeviceScanning: AnyObject {
-	var scanning: Bool { get set }
-}
-
-protocol DeviceScanning2: DeviceScanning {
-	func snapshotDevices() -> [any DeviceIdentifiable]
-	func startObservingDevices(onChange: @escaping () -> Void)
-}
-
-protocol DeviceScanner: DeviceScanning2 {
-	associatedtype Device: DeviceIdentifiable
-	var devices: [Device] { get }
-}
-
-extension DeviceScanner {
-	func snapshotDevices() -> [any DeviceIdentifiable] {
-		devices.map { $0 as any DeviceIdentifiable }
-	}
-
-	func startObservingDevices(onChange: @escaping () -> Void) {
-		func track() {
-			withObservationTracking(
-				{ _ = devices },
-				onChange: {
-					onChange()
-					track()
-				}
-			)
-		}
-		track()
-	}
-}
-
-// MARK: - Facility
-
-public struct FacilityCategory: Hashable, Sendable {
-	let rawValue: String
-	public init(_ rawValue: String) {
-		self.rawValue = rawValue
-	}
-}
-
-public protocol Facility: Identifiable {
-	var id: UUID { get }
-
-	var category: FacilityCategory { get }
-	var name: String { get }
-	var image: ImageName { get }
-
-	var connectionState: ConnectionState { get }
-	var heartBeat: Int { get }
-
-	func connect()
-	func fullStop()
-	func disconnect()
-
-	var battery: Double? { get }
-}
-
-public extension Facility {
-	var heartBeat: Int { connectionState == .connected ? 0 : -1 }
-
-	var battery: Double? { nil }
-}
-
-// MARK: - FacilityFactory
-
 @Observable
-final class FacilityRepository{
+final class FacilityRepository {
 	private let facilitiesForDevice: (any DeviceIdentifiable) -> [any Facility]
 	private var facilitiesByDeviceID: [UUID: [any Facility]] = [:]
 
@@ -136,8 +61,6 @@ final class FacilityRepository{
 		}
 	}
 }
-
-// MARK: - Concrete scanner compatible with FacilityFactory
 
 struct DemoDevice: DeviceIdentifiable {
 	let id: UUID
