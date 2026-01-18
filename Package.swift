@@ -1,14 +1,12 @@
-// swift-tools-version: 5.7
+// swift-tools-version: 5.9
 
 import PackageDescription
 
 let package = Package(
     name: "BLEByJove",
     platforms: [
-        .macOS(.v13),
-        .iOS(.v16),
-        .watchOS(.v9),
-        .tvOS(.v16)
+        .iOS(.v17),
+        .watchOS(.v10),
     ],
     products: [
         .library(
@@ -16,6 +14,7 @@ let package = Package(
             targets: ["BLEByJove"]),
     ],
     dependencies: [
+        .package(path: "../SBJKit"),
         .package(
 			url: "https://github.com/apple/swift-collections.git",
 			.upToNextMinor(from: "1.0.4") // or `.upToNextMajor
@@ -25,6 +24,7 @@ let package = Package(
         .target(
             name: "BLEByJove",
             dependencies: [
+				"SBJKit",
 				.product(name: "Collections", package: "swift-collections")
 			]),
         .testTarget(

@@ -43,3 +43,7 @@ public class PFClient: ObservableObject {
 		}
 	}
 }
+
+public protocol PowerFunctionsRemote {
+	func transmit(cmd: PFCommand)
+}
