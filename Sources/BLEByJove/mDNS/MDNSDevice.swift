@@ -1,6 +1,5 @@
 import Network
 import Foundation
-import Combine
 
 public class MDNSDevice: ObservableObject, DeviceIdentifiable {
 	public let service: String

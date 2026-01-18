@@ -9,33 +9,18 @@ import Foundation
 
 public protocol DeviceScanning: AnyObject {
 	var scanning: Bool { get set }
+	func anyDevices() -> [any DeviceIdentifiable]
 }
 
-protocol DeviceScanning2: DeviceScanning {
-	func snapshotDevices() -> [any DeviceIdentifiable]
-	func startObservingDevices(onChange: @escaping () -> Void)
-}
-
-protocol DeviceScanner: DeviceScanning2 {
+public protocol DeviceScanner: DeviceScanning {
 	associatedtype Device: DeviceIdentifiable
 	var devices: [Device] { get }
 }
 
-extension DeviceScanner {
-	func snapshotDevices() -> [any DeviceIdentifiable] {
+public extension DeviceScanner {
+	func anyDevices() -> [any DeviceIdentifiable] {
 		devices.map { $0 as any DeviceIdentifiable }
 	}
-
-	func startObservingDevices(onChange: @escaping () -> Void) {
-		func track() {
-			withObservationTracking(
-				{ _ = devices },
-				onChange: {
-					onChange()
-					track()
-				}
-			)
-		}
-		track()
-	}
 }
+
+

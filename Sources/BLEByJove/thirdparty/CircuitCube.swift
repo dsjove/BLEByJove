@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Combine
 
 public final actor CircuitCube {
 	private struct Component: BTComponent {

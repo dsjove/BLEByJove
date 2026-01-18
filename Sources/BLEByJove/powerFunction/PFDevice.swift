@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 
 public class PFDevice: ObservableObject, DeviceIdentifiable {
 	public let info: PFMeta

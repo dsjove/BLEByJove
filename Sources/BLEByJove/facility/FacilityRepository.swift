@@ -21,12 +21,11 @@ final class FacilityRepository {
 		self.facilitiesForDevice = facilitiesForDevice
 	}
 
-	public func addScanner(_ scanner: any DeviceScanning2) {
+	public func addScanner<S: DeviceScanner>(_ scanner: S) {
 		scanners.append(scanner)
-		sync(from: scanner)
-		scanner.startObservingDevices { [weak self, weak scanner] in
-			guard let self, let scanner else { return }
-			self.sync(from: scanner)
+		withObservationTracking(for: self, with: scanner, value: \.devices)
+		{ this, scanner, _ in
+			this.sync(from: scanner)
 		}
 	}
 
@@ -36,8 +35,8 @@ final class FacilityRepository {
 		}
 	}
 
-	private func sync(from scanner: any DeviceScanning2) {
-		let devices = scanner.snapshotDevices()
+	private func sync(from scanner: any DeviceScanner) {
+		let devices = scanner.anyDevices()
 		let currentIDs = Set(devices.map(\.id))
 		// Add new devices
 		for device in devices where facilitiesByDeviceID[device.id] == nil {

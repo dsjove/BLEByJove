@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 
-public class PFClient: DeviceScanning, ObservableObject {
+public class PFClient: DeviceScanner, ObservableObject {
 	private let knownDevices: [Data: PFMeta]
 	private let transmit: (PFCommand) -> Void
 	private var timeoutTimer: Timer?

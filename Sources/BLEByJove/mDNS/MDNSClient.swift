@@ -2,7 +2,7 @@ import Network
 import Foundation
 import Combine
 
-public class MDNSClient: DeviceScanning, ObservableObject {
+public class MDNSClient: DeviceScanner, ObservableObject {
 	private let browsers: [NWBrowser]
 	private var known: [NWEndpoint: MDNSDevice] = [:] {
 		didSet {
