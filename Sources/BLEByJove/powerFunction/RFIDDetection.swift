@@ -1,5 +1,9 @@
 import Foundation
 
+public protocol RFIDConsumer {
+	func didDetectRFID(_ detection: RFIDDetection)
+}
+
 public struct RFIDDetection: Equatable, Hashable, Codable, BTSerializable, CustomStringConvertible {
 	public let reader: UInt32
 	public let timestampMS: UInt32

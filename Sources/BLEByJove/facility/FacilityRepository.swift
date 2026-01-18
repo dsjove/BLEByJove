@@ -63,3 +63,11 @@ public final class FacilityRepository {
 		}
 	}
 }
+
+extension FacilityRepository: RFIDConsumer {
+	public func didDetectRFID(_ detection: RFIDDetection) {
+		for scanner in scanners {
+			( (scanner as? RFIDConsumer) )?.didDetectRFID(detection)
+		}
+	}
+}

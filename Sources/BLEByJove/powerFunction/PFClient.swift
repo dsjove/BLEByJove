@@ -46,6 +46,12 @@ public class PFClient: DeviceScanner {
 	}
 }
 
+extension PFClient: RFIDConsumer {
+	public func didDetectRFID(_ detection: RFIDDetection) {
+		detected(id: detection.id.id)
+	}
+}
+
 public protocol PowerFunctionsRemote {
 	func transmit(cmd: PFCommand)
 }
