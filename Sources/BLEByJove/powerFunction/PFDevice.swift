@@ -1,9 +1,11 @@
 import Foundation
+import SBJKit
 
 public class PFDevice: ObservableObject, DeviceIdentifiable {
 	public let info: PFMeta
 	public let id: UUID = UUID()
 	public var name: String { info.name }
+	public var image: ImageName { info.image }
 	public let transmit: (PFCommand) -> Void
 	public private(set) var pinged: Date
 

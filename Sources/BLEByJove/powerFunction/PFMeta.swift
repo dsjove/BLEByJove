@@ -1,18 +1,21 @@
 import Foundation
 import Combine
+import SBJKit
 
 public struct PFMeta: CustomStringConvertible {
 	public let id: Data // <= 16 size
 	public let name: String
+	public var image: ImageName
 	public let channel: UInt8 // 1..4
 	public let mode: PFMode
 	public let uuid: UUID
 	public let timeout: TimeInterval = 0
 
-	public init(id: Data, channel: UInt8, name: String, mode: PFMode) {
+	public init(id: Data, channel: UInt8, name: String, image: ImageName, mode: PFMode) {
 		self.id = id
 		self.channel = channel
 		self.name = name
+		self.image = image
 		self.mode = mode
 		var bytes = Data();
 		bytes.reserveCapacity(16)
