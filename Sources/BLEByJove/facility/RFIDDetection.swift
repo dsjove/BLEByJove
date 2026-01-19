@@ -4,6 +4,10 @@ public protocol RFIDConsumer {
 	func didDetectRFID(_ detection: RFIDDetection)
 }
 
+public protocol RFIDProducing {
+	static var rfid: KeyPath<Self, RFIDDetection> { get }
+}
+
 public struct RFIDDetection: Equatable, Hashable, Codable, BTSerializable, CustomStringConvertible {
 	public let reader: UInt32
 	public let timestampMS: UInt32

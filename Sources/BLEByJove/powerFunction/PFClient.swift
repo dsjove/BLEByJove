@@ -26,7 +26,7 @@ public class PFClient: DeviceScanner {
 	}
 
 	public func detected(id: Data) -> Bool {
-		guard !scanning else { return false }
+		guard scanning else { return false }
 		if let index = devices.firstIndex(where: { $0.info.id == id }) {
 			devices[index].ping()
 			return true

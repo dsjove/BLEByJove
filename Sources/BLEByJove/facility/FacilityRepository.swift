@@ -12,22 +12,22 @@ import SBJKit
 public typealias FacilityEntry = Identified<any Facility>
 
 @Observable
-public final class FacilityRepository {
-	private let facilitiesForDevice: (any DeviceIdentifiable) -> [any Facility]
-	private var facilitiesByDeviceID: [UUID: [any Facility]] = [:]
-
+public final class FacilityRepository: RFIDConsumer {
 	public private(set) var scanners: [any DeviceScanning] = []
-	public private(set) var facilities: [any Facility] = []
-	public var facilityEntries: [FacilityEntry] { facilities.map({FacilityEntry($0)}) }
 
-	public init(facilitiesForDevice: @escaping (any DeviceIdentifiable) -> [any Facility]) {
-		self.facilitiesForDevice = facilitiesForDevice
+	private let createFacilities: (any DeviceIdentifiable) -> [any Facility]
+	private var facilitiesByDeviceID: [ObjectIdentifier : [UUID: [FacilityEntry]]] = [:]
+	public private(set) var facilities: [FacilityEntry] = []
+
+	private var rfidTokensByDeviceID: [UUID: [ObserveToken]] = [:]
+
+	public init(createFacilities: @escaping (any DeviceIdentifiable) -> [any Facility]) {
+		self.createFacilities = createFacilities
 	}
 
 	public func addScanner<S: DeviceScanner>(_ scanner: S) {
 		scanners.append(scanner)
-		withObservationTracking(for: self, with: scanner, value: \.devices)
-		{ this, scanner, _ in
+		observe(for: self, with: scanner, \.devices) { this, scanner, _ in
 			this.sync(from: scanner)
 		}
 	}
@@ -39,35 +39,62 @@ public final class FacilityRepository {
 	}
 
 	private func sync(from scanner: any DeviceScanner) {
-		let devices = scanner.anyDevices()
-		let currentIDs = Set(devices.map(\.id))
-		// Add new devices
-		for device in devices where facilitiesByDeviceID[device.id] == nil {
-			facilitiesByDeviceID[device.id] = facilitiesForDevice(device)
+		let scannerDevices = scanner.anyDevices()
+		let scannerDeviceIds = Set(scannerDevices.map(\.id))
+		var scope = facilitiesByDeviceID[ObjectIdentifier(scanner)] ?? [:]
+
+		// Given never seen device before
+		for device in scannerDevices where scope[device.id] == nil {
+			// Create the facilities
+			let newFacilities = createFacilities(device)
+			scope[device.id] = newFacilities.map { .init($0, id: $0.id) }
+			// Observe RFIDs if we can
+			for facility in newFacilities {
+				if let rfidProducer = facility as? (AnyObject & RFIDProducing) {
+					observeRFID(rfidProducer, deviceID: device.id)
+				}
+			}
 		}
-		// Remove devices that disappeared
-		for knownID in facilitiesByDeviceID.keys where !currentIDs.contains(knownID) {
-			facilitiesByDeviceID.removeValue(forKey: knownID)
+
+		// Observe RFID producers
+		func observeRFID<P: AnyObject & RFIDProducing>(_ rfidProducer: P, deviceID: UUID) {
+			let token = observe(for: self, with: rfidProducer, P.rfid) { this, _, value in
+				this.didDetectRFID(value)
+			}
+			var tokensForDevice = rfidTokensByDeviceID[deviceID] ?? []
+			tokensForDevice.append(token)
+			rfidTokensByDeviceID[deviceID] = tokensForDevice
 		}
+
+		// If devices have disappeared
+		for deviceID in scope.keys where !scannerDeviceIds.contains(deviceID) {
+			// Remove all facilities for the device
+			scope.removeValue(forKey: deviceID)
+			// Cancel all tokens for the device
+			if let tokens = rfidTokensByDeviceID.removeValue(forKey: deviceID) {
+				for token in tokens { token.cancel() }
+			}
+		}
+		facilitiesByDeviceID[ObjectIdentifier(scanner)] = scope
 		rebuildFacilitiesSorted()
 	}
 
-	private func rebuildFacilitiesSorted() {
-		let all = facilitiesByDeviceID.values.flatMap { $0 }
-		facilities = all.sorted {
-			let cmp = $0.name.localizedStandardCompare($1.name)
-			if cmp != .orderedSame {
-				return cmp == .orderedAscending
-			}
-			return $0.id.uuidString < $1.id.uuidString
-		}
-	}
-}
-
-extension FacilityRepository: RFIDConsumer {
 	public func didDetectRFID(_ detection: RFIDDetection) {
 		for scanner in scanners {
 			( (scanner as? RFIDConsumer) )?.didDetectRFID(detection)
+		}
+	}
+
+	private func rebuildFacilitiesSorted() {
+		let all = facilitiesByDeviceID.values.flatMap { $0.values.flatMap { $0 } }
+		facilities = all.sorted { lhs, rhs in
+			let lhsName = lhs.value.name
+			let rhsName = rhs.value.name
+			let cmp: ComparisonResult = lhsName.localizedStandardCompare(rhsName)
+			if cmp != .orderedSame {
+				return cmp == .orderedAscending
+			}
+			return lhs.id.uuidString < rhs.id.uuidString
 		}
 	}
 }

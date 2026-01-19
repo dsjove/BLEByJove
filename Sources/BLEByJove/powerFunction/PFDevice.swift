@@ -2,7 +2,7 @@ import Foundation
 
 public class PFDevice: ObservableObject, DeviceIdentifiable {
 	public let info: PFMeta
-	public var id: UUID { info.uuid }
+	public let id: UUID = UUID()
 	public var name: String { info.name }
 	public let transmit: (PFCommand) -> Void
 	public private(set) var pinged: Date
