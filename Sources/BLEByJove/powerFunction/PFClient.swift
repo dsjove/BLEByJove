@@ -3,15 +3,15 @@ import Foundation
 @Observable
 public class PFClient: DeviceScanner {
 	private let knownDevices: [Data: PFMeta]
-	private let transmit: (PFCommand) -> Void
+	private let transmitter: PFTransmitter
 	private var timeoutTimer: Timer?
 
 	public private(set) var devices: [PFDevice] = []
 	public var scanning: Bool = false
 
-	public init(knownDevices: [PFMeta], transmit: @escaping (PFCommand) -> Void) {
+	public init(knownDevices: [PFMeta], transmitter: PFTransmitter) {
 		self.knownDevices = Dictionary(uniqueKeysWithValues: knownDevices.map { ($0.id, $0) })
-		self.transmit = transmit
+		self.transmitter = transmitter
 
 		let minTimeout = self.knownDevices.values.compactMap { $0.timeout }.min()
 		if let interval = minTimeout, interval > 0 {
@@ -32,7 +32,7 @@ public class PFClient: DeviceScanner {
 			return true
 		}
 		else if let info = knownDevices[id] {
-			devices.append(.init(info: info, transmit: transmit))
+			devices.append(.init(info: info, transmitter: transmitter))
 			return true
 		}
 		return false
@@ -52,15 +52,11 @@ extension PFClient: RFIDConsumer {
 	}
 }
 
-public protocol PowerFunctionsRemote {
-	func transmit(cmd: PFCommand)
-}
-
-extension FacilityRepository: PowerFunctionsRemote {
+extension FacilityRepository: PFTransmitter {
 	public func transmit(cmd: PFCommand) {
 		facilities
 			.lazy
-			.compactMap { $0 as? PowerFunctionsRemote }
+			.compactMap { $0.value as? PFTransmitter }
 			.first?.transmit(cmd: cmd)
 	}
 }

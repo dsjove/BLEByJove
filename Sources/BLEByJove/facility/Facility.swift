@@ -9,20 +9,27 @@ public struct FacilityCategory: Hashable, Sendable {
 	}
 }
 
-public protocol Facility: Identifiable {
+public protocol HardwareConnecting {
+	var hasConnectionState: Bool { get }
+	var connectionState: ConnectionState { get }
+	func connect()
+	func disconnect()
+
+	var heartBeat: Int { get }
+	func fullStop()
+}
+
+public extension Facility {
+	var hasConnectionState: Bool { true }
+	var heartBeat: Int { connectionState == .connected ? 0 : -1 }
+}
+
+public protocol Facility: HardwareConnecting, Identifiable {
 	var id: UUID { get }
 
 	var category: FacilityCategory { get }
 	var name: String { get }
 	var image: ImageName { get }
-
-	var hasConnectionState: Bool { get }
-	var connectionState: ConnectionState { get }
-	var heartBeat: Int { get }
-
-	func connect()
-	func fullStop()
-	func disconnect()
 
 	var canSetName: Bool { get }
 	func change(name: String)
@@ -33,9 +40,5 @@ public protocol Facility: Identifiable {
 public extension Facility {
 	var canSetName: Bool { false }
 	func change(name: String) {}
-
-	var hasConnectionState: Bool { true }
-	var heartBeat: Int { connectionState == .connected ? 0 : -1 }
-
 	var battery: Double? { nil }
 }

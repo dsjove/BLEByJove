@@ -36,7 +36,7 @@ public enum PFMode: UInt8, CaseIterable, Hashable, Equatable, Codable, BTSeriali
 public struct PFCommand: Hashable, Equatable, Codable, BTSerializable, CustomStringConvertible {
 	public let channel: UInt8 // 1..4
 	public let port: PFPort
-	public let power: UInt8 // 0=float, 1..7=fwd1..fwd7, 8=brake, 9..15=rev7..rev1
+	public let power: Int8
 	public let mode: PFMode
 
 	public var packedSize: Int {
@@ -54,7 +54,7 @@ public struct PFCommand: Hashable, Equatable, Codable, BTSerializable, CustomStr
 		"PFCommand(channel: \(channel), port: \(port), power: \(power), mode: \(mode))"
 	}
 
-	public init(channel: UInt8 = 1, port: PFPort = .A, power: UInt8 = 0, mode: PFMode = .combo) {
+	public init(channel: UInt8 = 1, port: PFPort = .A, power: Int8 = 0, mode: PFMode = .combo) {
 		self.channel = channel
 		self.port = port
 		self.power = power
@@ -74,4 +74,9 @@ public struct PFCommand: Hashable, Equatable, Codable, BTSerializable, CustomStr
 		power.pack(btData: &data)
 		mode.pack(btData: &data)
 	}
+}
+
+public protocol PFTransmitter {
+	func transmit(cmd: PFCommand) -> Void
+	//TODO: connection state
 }
