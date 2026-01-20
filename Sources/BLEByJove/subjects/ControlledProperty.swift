@@ -26,6 +26,30 @@ public protocol ControlledProperty: Identifiable, AnyObject {
 }
 
 @Observable
+public class LocalControlledProperty<P: DefaultInitializable>: ControlledProperty {
+	public let id: CombineIdentifier = .init()
+	private let defaultValue: P
+
+	init(defaultValue: P = .init()) {
+		self.defaultValue = defaultValue
+		self.control = defaultValue
+		self.feedback = defaultValue
+	}
+
+	public var control: P {
+		didSet {
+			feedback = control
+		}
+	}
+
+	public private(set) var feedback: P
+
+	public func reset() {
+		self.control = defaultValue
+	}
+}
+
+@Observable
 public class TransformedProperty<T: ValueTransforming>: ControlledProperty {
 	public typealias P = T.P
 	public typealias M = T.M

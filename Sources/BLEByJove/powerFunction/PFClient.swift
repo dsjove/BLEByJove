@@ -1,19 +1,19 @@
 import Foundation
 
 @Observable
-public class PFClient: DeviceScanner {
-	private let knownDevices: [Data: PFMeta]
+public class PFClient: DeviceScanner, RFIDConsumer {
+	private let meta: (RFIDDetection)->PFMeta?
 	private let transmitter: PFTransmitter
 	private var timeoutTimer: Timer?
 
 	public private(set) var devices: [PFDevice] = []
 	public var scanning: Bool = false
 
-	public init(knownDevices: [PFMeta], transmitter: PFTransmitter) {
-		self.knownDevices = Dictionary(uniqueKeysWithValues: knownDevices.map { ($0.id, $0) })
+	public init(meta: @escaping (RFIDDetection)->PFMeta?, transmitter: PFTransmitter) {
+		self.meta = meta
 		self.transmitter = transmitter
 
-		let minTimeout = self.knownDevices.values.compactMap { $0.timeout }.min()
+		let minTimeout: TimeInterval? = 10
 		if let interval = minTimeout, interval > 0 {
 			self.timeoutTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
 				self?.pruneTimedOutDevices()
@@ -25,17 +25,14 @@ public class PFClient: DeviceScanner {
 		timeoutTimer?.invalidate()
 	}
 
-	public func detected(id: Data) -> Bool {
-		guard scanning else { return false }
-		if let index = devices.firstIndex(where: { $0.info.id == id }) {
+	public func didDetectRFID(_ detection: RFIDDetection) {
+		guard scanning else { return }
+		if let index = devices.firstIndex(where: { $0.info.id == detection.id.id }) {
 			devices[index].ping()
-			return true
 		}
-		else if let info = knownDevices[id] {
+		else if let info = meta(detection) {
 			devices.append(.init(info: info, transmitter: transmitter))
-			return true
 		}
-		return false
 	}
 
 	private func pruneTimedOutDevices() {
@@ -43,12 +40,6 @@ public class PFClient: DeviceScanner {
 		devices.removeAll { device in
 			device.hasTimedOut(referenceDate: now)
 		}
-	}
-}
-
-extension PFClient: RFIDConsumer {
-	public func didDetectRFID(_ detection: RFIDDetection) {
-		detected(id: detection.id.id)
 	}
 }
 
