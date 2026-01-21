@@ -1,5 +1,5 @@
 //
-//  DeviceIdentifiable 2.swift
+//  DeviceIdentifiable.swift
 //  BLEByJove
 //
 //  Created by David Giovannini on 1/18/26.

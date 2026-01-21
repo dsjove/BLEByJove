@@ -42,12 +42,3 @@ public class PFClient: DeviceScanner, RFIDConsumer {
 		}
 	}
 }
-
-extension FacilityRepository: PFTransmitter {
-	public func transmit(cmd: PFCommand) {
-		facilities
-			.lazy
-			.compactMap { $0.value as? PFTransmitter }
-			.first?.transmit(cmd: cmd)
-	}
-}

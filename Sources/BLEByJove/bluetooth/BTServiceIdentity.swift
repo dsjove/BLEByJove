@@ -23,8 +23,8 @@ public extension BTComponent {
 }
 
 public struct EmptyComponent: BTComponent {
-	public let rawValue: UInt8 = 0
-	public init() {}
+	public let rawValue: UInt8
+	public init(_ v: UInt8 = 0x00) {rawValue = v}
 }
 
 public protocol BTCategory: CustomStringConvertible {
@@ -42,8 +42,8 @@ public extension BTCategory {
 }
 
 public struct EmptyCategory: BTCategory {
-	public let rawValue: UInt8 = 0x00
-	public init() {}
+	public let rawValue: UInt8
+	public init(_ v: UInt8 = 0x00) {rawValue = v}
 }
 
 public protocol BTSubCategory: CustomStringConvertible {
@@ -61,8 +61,8 @@ public extension BTSubCategory {
 }
 
 public struct EmptySubCategory: BTSubCategory {
-	public let rawValue: UInt8 = 0x00
-	public init() {}
+	public let rawValue: UInt8
+	public init(_ v: UInt8 = 0x00) {rawValue = v}
 }
 
 public protocol BTChannel: CustomStringConvertible {
