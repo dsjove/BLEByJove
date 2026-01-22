@@ -9,7 +9,7 @@ public class PFClient<M : PFMeta>: DeviceScanner, RFIDConsumer {
 	public private(set) var devices: [PFDevice<M>] = []
 	public var scanning: Bool = false
 
-	public init(meta: @escaping (SampledRFIDDetection)->M?, transmitter: PFTransmitter) {
+	public init(transmitter: PFTransmitter, meta: @escaping (SampledRFIDDetection)->M?) {
 		self.meta = meta
 		self.transmitter = transmitter
 
