@@ -9,7 +9,7 @@ import Foundation
 
 public protocol DeviceScanning: AnyObject {
 	var scanning: Bool { get set }
-	func anyDevices() -> [any DeviceIdentifiable]
+	var anyDevices: [any DeviceIdentifiable] { get }
 }
 
 public protocol DeviceScanner: DeviceScanning {
@@ -18,7 +18,7 @@ public protocol DeviceScanner: DeviceScanning {
 }
 
 public extension DeviceScanner {
-	func anyDevices() -> [any DeviceIdentifiable] {
+	var anyDevices: [any DeviceIdentifiable] {
 		devices.map { $0 as any DeviceIdentifiable }
 	}
 }
