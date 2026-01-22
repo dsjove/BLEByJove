@@ -78,5 +78,6 @@ public struct PFCommand: Hashable, Equatable, Codable, BTSerializable, CustomStr
 
 public protocol PFTransmitter {
 	func transmit(cmd: PFCommand) -> Void
+	var pfConnectionState: ConnectionState { get }
 	//TODO: connection state
 }
