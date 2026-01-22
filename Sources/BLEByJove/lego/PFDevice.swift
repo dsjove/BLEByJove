@@ -1,19 +1,21 @@
 import Foundation
 import SBJKit
 
-public class PFDevice: ObservableObject, DeviceIdentifiable {
-	public let info: PFMeta
+public class PFDevice<M: PFMeta>: ObservableObject, DeviceIdentifiable, PFDeviceTransmitter {
 	public let id: UUID
-	public var name: String { info.name }
-	public var image: ImageName { info.image }
-	public let transmitter: PFTransmitter
-	public private(set) var pinged: Date
+	public let info: M
+	private let transmitter: PFTransmitter
+	private private(set) var pinged: Date
 
-	public init(info: PFMeta, transmitter: PFTransmitter) {
-		self.info = info
+	public init(info: M, transmitter: PFTransmitter) {
 		self.id = info.uuid
+		self.info = info
 		self.transmitter = transmitter
 		self.pinged = Date()
+	}
+
+	public var pfConnectionState: ConnectionState {
+		transmitter.pfConnectionState
 	}
 
 	public func ping() {
@@ -26,10 +28,9 @@ public class PFDevice: ObservableObject, DeviceIdentifiable {
 		return elapsed >= info.timeout
 	}
 
-	public func send(port: PFPort, power: Int8) {
+	public func transmit(port: PFPort, power: Int8) {
 		let cmd = PFCommand(
 			channel: info.channel, port: port, power: power, mode: info.mode)
 		transmitter.transmit(cmd: cmd)
 	}
 }
-

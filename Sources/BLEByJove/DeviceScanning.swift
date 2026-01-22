@@ -29,7 +29,6 @@ extension ConnectionState {
 
 public protocol DeviceIdentifiable: Identifiable {
 	var id: UUID { get }
-	var name: String { get }
 }
 
 public protocol DeviceScanning: AnyObject {

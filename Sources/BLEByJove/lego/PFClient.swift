@@ -1,15 +1,15 @@
 import Foundation
 
 @Observable
-public class PFClient: DeviceScanner, RFIDConsumer {
-	private let meta: (SampledRFIDDetection)->PFMeta?
+public class PFClient<M : PFMeta>: DeviceScanner, RFIDConsumer {
+	private let meta: (SampledRFIDDetection)->M?
 	private let transmitter: PFTransmitter
 	private var timeoutTimer: Timer?
 
-	public private(set) var devices: [PFDevice] = []
+	public private(set) var devices: [PFDevice<M>] = []
 	public var scanning: Bool = false
 
-	public init(meta: @escaping (SampledRFIDDetection)->PFMeta?, transmitter: PFTransmitter) {
+	public init(meta: @escaping (SampledRFIDDetection)->M?, transmitter: PFTransmitter) {
 		self.meta = meta
 		self.transmitter = transmitter
 
