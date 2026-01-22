@@ -130,12 +130,6 @@ extension IPv4Address : BTSerializable {
 	}
 }
 
-public extension Data {
-	public var isZero: Bool {
-		isEmpty || allSatisfy({ $0 == .zero })
-	}
-}
-
 //TODO: use ULEB128_u64 for count
 public struct CountedBytes: Equatable, Hashable, Codable, BTSerializable, CustomStringConvertible {
 	public var id: Data
@@ -151,7 +145,7 @@ public struct CountedBytes: Equatable, Hashable, Codable, BTSerializable, Custom
 		}
 		var tmp = Data()
 		tmp.reserveCapacity(1 + data.count)
-		tmp[0] = UInt8(data.count)
+		tmp.append(UInt8(data.count))
 		tmp.append(contentsOf: data)
 		self.id = tmp
 	}
