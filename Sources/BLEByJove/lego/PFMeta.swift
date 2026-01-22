@@ -8,15 +8,16 @@ public struct PFMeta: CustomStringConvertible {
 	public var image: ImageName
 	public let channel: UInt8 // 1..4
 	public let mode: PFMode
+	public let timeout: TimeInterval
 	public let uuid: UUID
-	public let timeout: TimeInterval = 0
 
-	public init(id: Data, channel: UInt8, name: String, image: ImageName, mode: PFMode) {
+	public init(id: Data, channel: UInt8, name: String, image: ImageName, mode: PFMode, timeout: TimeInterval = 0) {
 		self.id = id
 		self.channel = channel
 		self.name = name
 		self.image = image
 		self.mode = mode
+		self.timeout = timeout
 		var bytes = Data();
 		bytes.reserveCapacity(16)
 		bytes.append(id.prefix(16))

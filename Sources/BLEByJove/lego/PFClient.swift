@@ -27,6 +27,7 @@ public class PFClient: DeviceScanner, RFIDConsumer {
 
 	public func didDetectRFID(_ detection: RFIDDetection) {
 		guard scanning else { return }
+		guard !detection.id.isZero else { return }
 		if let index = devices.firstIndex(where: { $0.info.id == detection.id.id }) {
 			devices[index].ping()
 		}

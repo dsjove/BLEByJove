@@ -20,7 +20,7 @@ extension ConnectionState {
 		case .disconnected:
 			.system("cable.connector.slash")
 		case .connecting:
-			.system("progress.indicator")
+			.system("arrow.triangle.2.circlepath")
 		case .connected:
 			.system("cable.connector")
 		}
