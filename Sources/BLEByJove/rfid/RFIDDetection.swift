@@ -1,4 +1,5 @@
 import Foundation
+import SBJKit
 
 public struct RFIDDetection: Equatable, Hashable, Codable, BTSerializable, CustomStringConvertible {
 	public let reader: UInt32
@@ -10,7 +11,7 @@ public struct RFIDDetection: Equatable, Hashable, Codable, BTSerializable, Custo
 	}
 
 	public var description: String {
-		"\(reader)-\(timestampMS)-\(id)"
+		"\(reader)-\(timestampMS)-\(id.sbjHexDescription)"
 	}
 
 	public init() {
@@ -18,7 +19,13 @@ public struct RFIDDetection: Equatable, Hashable, Codable, BTSerializable, Custo
 		self.timestampMS = 0
 		self.id = .init()
 	}
-	
+
+	public init(reader: UInt32, timeStampMS: UInt32 = 0, id: Data) {
+		self.reader = reader
+		self.timestampMS = timeStampMS
+		self.id = id
+	}
+
 	public init(unpack data: Data, _ cursor: inout Int) throws {
 		self.reader = try .init(unpack: data, &cursor)
 		self.timestampMS = try .init(unpack: data, &cursor)

@@ -10,21 +10,6 @@ import BLEByJove
 import SBJKit
 import Observation
 
-public struct SampledRFIDDetection {
-	public let date = Date()
-	public let count: Int
-	public let anotherRound: Bool
-	public let rfid: RFIDDetection
-}
-
-public protocol RFIDProducing {
-	var currentRFID: SampledRFIDDetection? { get }
-}
-
-public protocol RFIDConsumer {
-	func consumeRFID(_ detection: SampledRFIDDetection)
-}
-
 @Observable
 public class RFIDProducer: RFIDProducing {
 	private typealias Value = BTProperty<BTValueTransformer<RFIDDetection>>
