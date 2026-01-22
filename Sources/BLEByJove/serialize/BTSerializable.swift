@@ -130,6 +130,13 @@ extension IPv4Address : BTSerializable {
 	}
 }
 
+public extension Data {
+	public var isZero: Bool {
+		isEmpty || allSatisfy({ $0 == .zero })
+	}
+}
+
+//TODO: use ULEB128_u64 for count
 public struct CountedBytes: Equatable, Hashable, Codable, BTSerializable, CustomStringConvertible {
 	public var id: Data
 	public var packedSize: Int { id.count + 1 }
@@ -138,8 +145,15 @@ public struct CountedBytes: Equatable, Hashable, Codable, BTSerializable, Custom
 		self.id = Data()
 	}
 
-	public init(id: Data) {
-		self.id = id
+	public init(_ data: Data) throws {
+		guard data.count <= UInt8.max else {
+			throw BTSerializeError.invalidDataLength
+		}
+		var tmp = Data()
+		tmp.reserveCapacity(1 + data.count)
+		tmp[0] = UInt8(data.count)
+		tmp.append(contentsOf: data)
+		self.id = tmp
 	}
 
 	public init(unpack data: Data, _ cursor: inout Int) throws {
@@ -156,12 +170,8 @@ public struct CountedBytes: Equatable, Hashable, Codable, BTSerializable, Custom
 		data.append(contentsOf: id)
 	}
 
-	public var isZero: Bool {
-		id.isEmpty || id.allSatisfy({ $0 == .zero })
-	}
-
 	public var description: String {
-		isZero ? "" : id.sbjHexFormat(bytesPerRow: 128)
+		id.sbjHexFormat(bytesPerRow: 128)
 	}
 }
 
