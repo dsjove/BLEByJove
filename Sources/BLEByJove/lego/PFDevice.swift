@@ -8,7 +8,7 @@ public class PFDevice<M: PFMeta>: ObservableObject, DeviceIdentifiable, PFDevice
 	private private(set) var pinged: Date
 
 	public init(info: M, transmitter: PFTransmitter) {
-		self.id = info.uuid
+		self.id = UUID(dataBytes: info.id)
 		self.info = info
 		self.transmitter = transmitter
 		self.pinged = Date()

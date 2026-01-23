@@ -30,6 +30,8 @@ public struct SampledRFIDDetection: Equatable, Hashable, Codable, CustomStringCo
 
 public protocol RFIDProducing {
 	var currentRFID: SampledRFIDDetection? { get }
+
+	func resetRFID()
 }
 
 public protocol RFIDConsumer {

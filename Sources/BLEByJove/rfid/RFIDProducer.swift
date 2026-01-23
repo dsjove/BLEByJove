@@ -90,7 +90,7 @@ public class RFIDProducer: RFIDProducing {
 		}
 	}
 
-	public func reset() {
+	public func resetRFID() {
 		self.currentRFID = nil
 		staleTimer?.invalidate()
 		staleTimer = nil

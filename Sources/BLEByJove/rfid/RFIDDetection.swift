@@ -1,6 +1,24 @@
 import Foundation
 import SBJKit
 
+public extension UUID {
+	init(dataBytes: Data) {
+		var bytes = Data();
+		bytes.reserveCapacity(16)
+		bytes.append(dataBytes.prefix(16))
+		if bytes.count < 16 {
+			bytes.append(Data(repeating: 0, count: 16 - bytes.count))
+		}
+		let b = Array(bytes.prefix(16))
+		self = .init(uuid: (
+			b[0], b[1], b[2], b[3],
+			b[4], b[5], b[6], b[7],
+			b[8], b[9], b[10], b[11],
+			b[12], b[13], b[14], b[15]
+		))
+	}
+}
+
 public struct RFIDDetection: Equatable, Hashable, Codable, BTSerializable, CustomStringConvertible {
 	public let reader: UInt32
 	public let timestampMS: UInt32
@@ -11,7 +29,7 @@ public struct RFIDDetection: Equatable, Hashable, Codable, BTSerializable, Custo
 	}
 
 	public var description: String {
-		"\(reader)-\(timestampMS)-\(id.sbjHexDescription)"
+		"\(reader)-\(timestampMS)-\(id.sbjHexFormat())"
 	}
 
 	public init() {
