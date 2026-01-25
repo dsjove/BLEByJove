@@ -48,6 +48,10 @@ public class RFIDProducer: RFIDProducing {
 		staleTimer?.invalidate()
 	}
 
+	public func receive(_ detection: RFIDDetection) {
+		received.receiveFeedback(newFeedbackMomento: detection)
+	}
+
 	private func updateCurrent(for detection: RFIDDetection) {
 		if detection.id.isZero {
 			self.currentRFID = nil
