@@ -5,35 +5,38 @@
 //  Created by David Giovannini on 1/22/26.
 //
 
-
 import Foundation
-import BLEByJove
-import SBJKit
-import Observation
 
-public struct SampledRFIDDetection: Equatable, Hashable, Codable, CustomStringConvertible  {
-	public let date = Date()
-	public let count: Int
-	public let anotherRound: Bool
-	public let rfid: RFIDDetection
+public struct SampledRFIDDetection: Equatable, Hashable, Codable, CustomStringConvertible, Sendable {
+    public let date: Date
+    public let count: Int
+    public let anotherRound: Bool
+    public let rfid: RFIDDetection
 
-	public init(count: Int = 1, anotherRound: Bool = true, rfid: RFIDDetection) {
-		self.count = count
-		self.anotherRound = anotherRound
-		self.rfid = rfid
-	}
+    public init(
+        date: Date = Date(),
+        count: Int = 1,
+        anotherRound: Bool = true,
+        rfid: RFIDDetection
+    ) {
+        self.date = date
+        self.count = count
+        self.anotherRound = anotherRound
+        self.rfid = rfid
+    }
 
-	public var description: String {
-		"\(date): \(count)\(anotherRound ? "*" : "") - \(rfid)"
-	}
+    public var description: String {
+        "\(date): \(count)\(anotherRound ? "*" : "") - \(rfid)"
+    }
 }
 
-public protocol RFIDProducing {
-	var currentRFID: SampledRFIDDetection? { get }
-
-	func resetRFID()
+@MainActor
+public protocol RFIDProducing: AnyObject {
+    var currentRFID: SampledRFIDDetection? { get }
+    func resetRFID()
 }
 
-public protocol RFIDConsumer {
-	func consumeRFID(_ detection: SampledRFIDDetection)
+@MainActor
+public protocol RFIDConsumer: AnyObject {
+    func consumeRFID(_ detection: SampledRFIDDetection)
 }

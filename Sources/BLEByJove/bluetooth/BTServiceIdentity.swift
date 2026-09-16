@@ -165,7 +165,7 @@ public struct BTCharacteristicIdentity: Hashable, CustomStringConvertible {
 public struct BTServiceIdentity: CustomStringConvertible, Hashable {
 	public let characteristic: BTCharacteristicIdentity
 	public let name: String
-	public let identifer: CBUUID
+	public let identifier: CBUUID
 
 	public init(name: String) {
 		self.init(characteristic: BTCharacteristicIdentity(), identifier: name.data(using: .ascii)!, name: name)
@@ -187,15 +187,18 @@ public struct BTServiceIdentity: CustomStringConvertible, Hashable {
 			normalized.append(Data(repeating: 0x00, count: 12 - normalized.count))
 		}
 		data.append(contentsOf: normalized)
-		self.identifer = CBUUID(data: data)
+		self.identifier = CBUUID(data: data)
 	}
 	
+	@available(*, deprecated, renamed: "identifier")
+	public var identifer: CBUUID { identifier }
+
 	public var description: String {
 		name
 	}
 
 	public func characteristic(characteristic: BTCharacteristicIdentity) -> CBUUID {
-		var data = identifer.data
+		var data = identifier.data
 		var code = characteristic.bitValue.littleEndian
 		let prefix = Data(bytes: &code, count: MemoryLayout<UInt32>.size)
 		data.replaceSubrange(0..<4, with: prefix)

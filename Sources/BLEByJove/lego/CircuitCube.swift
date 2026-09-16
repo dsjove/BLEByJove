@@ -6,147 +6,127 @@
 //
 
 import Foundation
+import SBJFoundation
 
-public final actor CircuitCube {
-	private struct Component: BTComponent {
-		public let rawValue: UInt8 = 0x6e
-		public init() {}
-	}
+@MainActor
+public final class CircuitCube {
+    private struct Component: BTComponent {
+        let rawValue: UInt8 = 0x6e
+    }
 
-	private struct Category: BTCategory {
-		public let rawValue: UInt8 = 0x40
-		public init() {}
-	}
+    private struct Category: BTCategory {
+        let rawValue: UInt8 = 0x40
+    }
 
-	public static let Service = BTServiceIdentity(
-		characteristic: BTCharacteristicIdentity(
-			component: Component(),
-			category: Category(),
-			subCategory: EmptySubCategory(),
-			channel: BTUARTChannel.duplex),
-		identifier: "b5a3f393e0a9e50e24dcca9e".sbjHexToData()!,
-		name: "Circuit Cube")
+    public static let Service = BTServiceIdentity(
+        characteristic: BTCharacteristicIdentity(
+            component: Component(),
+            category: Category(),
+            subCategory: EmptySubCategory(),
+            channel: BTUARTChannel.duplex
+        ),
+        identifier: "b5a3f393e0a9e50e24dcca9e".sbjHexToData()!,
+        name: "Circuit Cube"
+    )
 
-	private let device: BTDevice
-	private let uart: BTUART
+    private let device: BTDevice
+    private let uart: BTUART
 
-	public var id: UUID {
-		device.id
-	}
+    public var id: UUID { device.id }
 
-	public init(device: BTDevice) {
-		self.device = device
-		self.uart = BTUART(
-			CircuitCube.Service.characteristic.apply(channel: BTUARTChannel.tx),
-			CircuitCube.Service.characteristic.apply(channel: BTUARTChannel.rx),
-			device)
-	}
+    public init(device: BTDevice) {
+        self.device = device
+        uart = BTUART(
+            Self.Service.characteristic.apply(channel: BTUARTChannel.tx),
+            Self.Service.characteristic.apply(channel: BTUARTChannel.rx),
+            device
+        )
+    }
 
-	public func connect() {
-		DispatchQueue.main.sync {
-			device.connect()
-		}
-		Task {
-			await self.uart.connect()
-		}
-	}
+    public func connect() {
+        device.connect()
+        uart.connect()
+    }
 
-	public func disconnect() {
-		DispatchQueue.main.sync {
-			device.connect()
-		}
-		Task {
-			await self.uart.disconnect()
-		}
-		device.disconnect()
-	}
+    public func disconnect() {
+        uart.disconnect()
+        device.disconnect()
+    }
 
-	public func battery() async -> Double? {
-		let cmd = "b"
-		return await uart.call(cmd.data(using: String.Encoding.ascii)) { data in
-			if let str = String(data: data, encoding: String.Encoding.ascii) {
-				if let value = Double(str) {
-					return value / 4.2
-				}
-			}
-			return nil
-		}
-	}
+    public func battery() async -> Double? {
+        let cmd = "b"
+        return await uart.call(cmd.data(using: .ascii)) { data in
+            guard let string = String(data: data, encoding: .ascii),
+                  let value = Double(string) else { return nil }
+            return value / 4.2
+        }
+    }
 
-	//TODO: only works sometimes
-	public func name() async -> String {
-		let cmd = "n?"
-		let name = await uart.call(cmd.data(using: String.Encoding.ascii)) { data in
-			DispatchQueue.main.sync {
-				let name: String = String(data: data, encoding: String.Encoding.ascii) ?? self.device.name
-				self.device.name = name
-				return name
-			}
-		}
-		if (name == nil) {
-			print("Failed to get \(self.device.name) name")
-		}
-		return name ?? "" //self.device.name
-	}
+    // TODO: only works sometimes on the physical Circuit Cube; preserve command syntax while investigating.
+    public func name() async -> String {
+        let response = await uart.call("n?".data(using: .ascii)) { [weak self] data -> String? in
+            guard let self else { return nil }
+            let value = String(data: data, encoding: .ascii) ?? device.name
+            device.name = value
+            return value
+        }
+        if response == nil {
+            print("Failed to get \(device.name) name")
+        }
+        return response ?? ""
+    }
 
-	//TODO: Does not work
-	public func name(set name: String = "") async -> Bool {
-		let allowed = name.safeName()
-		if allowed.isEmpty {
-			return false
-		}
-		DispatchQueue.main.async {
-			self.device.name = allowed
-		}
-		//Conflicting docs with the '='
-		let cmd = "n=\(allowed)\r\n"
-		let result = await uart.call(cmd.data(using: String.Encoding.ascii), timeout: 100) { $0 }
-		let success = (result?.first ?? 1) == 0
-		if !success {
-			print("Failed to set \(self.device.name) name")
-		}
-		return success
-	}
+    // TODO: Does not work reliably on the physical Circuit Cube. Keep the existing documented wire form.
+    public func name(set name: String = "") async -> Bool {
+        let allowed = name.safeName()
+        guard !allowed.isEmpty else { return false }
 
-	public enum Port: String {
-		case a
-		case b
-		case c
-	}
+        device.name = allowed
+        let cmd = "n=\(allowed)\r\n"
+        let result = await uart.call(cmd.data(using: .ascii), timeout: 100) { $0 }
+        let success = (result?.first ?? 1) == 0
+        if !success {
+            print("Failed to set \(device.name) name")
+        }
+        return success
+    }
 
-	public func power(set value: Int16, on port: Port, dropKey: String? = nil) async {
-		await power(set: [port : value], dropKey: dropKey)
-	}
+    public enum Port: String, Sendable {
+        case a
+        case b
+        case c
+    }
 
-	public func power(set value: Int16, on ports: [Port], dropKey: String? = nil) async {
-		await power(set: ports.reduce([:]) {
-			var a = $0
-			a[$1] = value
-			return a
-		}, dropKey: dropKey)
-	}
+    public func power(set value: Int16, on port: Port, dropKey: String? = nil) async {
+        await power(set: [port: value], dropKey: dropKey)
+    }
 
-	public func power(set values: [Port: Int16], dropKey: String? = nil) async {
-		let cmd = values.reduce("") {
-			let node = String(format: "%+04d\($1.key.rawValue)", (-255...255).clamp($1.value))
-			return $0 + node
-		}
-		await uart.call(cmd.data(using: String.Encoding.ascii), dropKey: dropKey)
-	}
+    public func power(set value: Int16, on ports: [Port], dropKey: String? = nil) async {
+        await power(
+            set: ports.reduce(into: [:]) { $0[$1] = value },
+            dropKey: dropKey
+        )
+    }
 
-	public func allOff() async -> Bool {
-		let cmd = "0"
-		return await uart.call(cmd.data(using: String.Encoding.ascii)) { data in
-			return (data.first ?? 1) == 0
-		} ?? false
-	}
+    public func power(set values: [Port: Int16], dropKey: String? = nil) async {
+        let cmd = values.reduce("") {
+            let node = String(format: "%+04d\($1.key.rawValue)", (-255...255).clamp($1.value))
+            return $0 + node
+        }
+        uart.call(cmd.data(using: .ascii), dropKey: dropKey)
+    }
+
+    public func allOff() async -> Bool {
+        await uart.call("0".data(using: .ascii)) { data in
+            (data.first ?? 1) == 0
+        } ?? false
+    }
 }
 
 private extension String {
-	func safeName() -> String {
-		let allowed = CharacterSet(charactersIn: " _-0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
-		let filtered = self.trimmingCharacters(in: allowed.inverted)
-		let trimmed = String(filtered.prefix(20))
-		return trimmed
-	}
+    func safeName() -> String {
+        let allowed = CharacterSet(charactersIn: " _-0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+        let filtered = trimmingCharacters(in: allowed.inverted)
+        return String(filtered.prefix(20))
+    }
 }

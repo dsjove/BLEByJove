@@ -6,36 +6,38 @@
 //
 
 import Foundation
-import SBJKit
+import SBJFoundation
 
-public enum ConnectionState: String {
-	case disconnected
-	case connecting
-	case connected
+public enum ConnectionState: String, Sendable {
+    case disconnected
+    case connecting
+    case connected
 }
 
-extension ConnectionState {
-	public var imageName: ImageName {
-		switch self {
-		case .disconnected:
-			.system("cable.connector.slash")
-		case .connecting:
-			.system("arrow.triangle.2.circlepath")
-		case .connected:
-			.system("cable.connector")
-		}
-	}
+public extension ConnectionState {
+    var imageReference: ImageReference {
+        switch self {
+        case .disconnected:
+            .system("cable.connector.slash")
+        case .connecting:
+            .system("arrow.triangle.2.circlepath")
+        case .connected:
+            .system("cable.connector")
+        }
+    }
 }
 
 public protocol DeviceIdentifiable: Identifiable {
-	var id: UUID { get }
+    var id: UUID { get }
 }
 
+@MainActor
 public protocol DeviceScanning: AnyObject {
-	var scanning: Bool { get set }
+    var scanning: Bool { get set }
 }
 
+@MainActor
 public protocol DeviceScanner: DeviceScanning {
-	associatedtype Device: DeviceIdentifiable
-	var devices: [Device] { get }
+    associatedtype Device: DeviceIdentifiable
+    var devices: [Device] { get }
 }

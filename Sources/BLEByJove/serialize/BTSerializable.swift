@@ -7,39 +7,38 @@
 
 import Foundation
 import Network
-import SBJKit
 
 public protocol DefaultInitializable {
-	init()
+    init()
 }
 
-public enum BTSerializeError: Error {
-	case invalidDataLength
-	case invalidRawValue
+public enum BTSerializeError: Error, Equatable {
+    case invalidDataLength
+    case invalidRawValue
 }
 
 public protocol BTPackable {
-	func pack(btData data: inout Data)
-	var packedSize: Int { get }
+    func pack(btData data: inout Data)
+    var packedSize: Int { get }
 }
 
 public extension BTPackable {
-	func pack() -> Data {
-		var data = Data(capacity: self.packedSize)
-		self.pack(btData: &data)
-		return data
-	}
+    func pack() -> Data {
+        var data = Data(capacity: packedSize)
+        pack(btData: &data)
+        return data
+    }
 }
 
 public protocol BTUnpackable {
-	init(unpack data: Data, _ cursor: inout Int) throws
+    init(unpack data: Data, _ cursor: inout Int) throws
 }
 
 public extension BTUnpackable {
-	init(unpack data: Data) throws {
-		var cursor = 0
-		try self.init(unpack: data, &cursor)
-	}
+    init(unpack data: Data) throws {
+        var cursor = 0
+        try self.init(unpack: data, &cursor)
+    }
 }
 
 public typealias BTSerializable = BTPackable & BTUnpackable & DefaultInitializable
@@ -56,97 +55,85 @@ extension Int64: BTSerializable {}
 extension Double: DefaultInitializable {}
 
 public extension FixedWidthInteger {
-	var packedSize: Int {
-		Self.packedSize
-	}
-	
-	static var packedSize: Int {
-		MemoryLayout<Self>.size
-	}
+    var packedSize: Int { Self.packedSize }
 
-	//suffix of suffix does not work!, introduce cursor
-	init(unpack data: Data, _ cursor: inout Int) throws {
-		if data.count < MemoryLayout<Self>.size {
-			throw BTSerializeError.invalidDataLength
-		}
-		//TODO: handle misaligned memory
-		var value: Self
-		value = data.withUnsafeBytes { pointer in
-			pointer.load(fromByteOffset: cursor, as: Self.self)
-		}
-		self = Self(littleEndian: value)
-		cursor += Self.packedSize
-	}
-	
-	func pack(btData data: inout Data) {
-		let value = self.littleEndian
-		withUnsafePointer(to: value) { (ptr: UnsafePointer<Self>) in
-			data.append(UnsafeBufferPointer(start: ptr, count: 1))
-		}
-	}
+    static var packedSize: Int { MemoryLayout<Self>.size }
+
+    init(unpack data: Data, _ cursor: inout Int) throws {
+        let size = Self.packedSize
+        guard cursor >= 0, cursor <= data.count, size <= data.count - cursor else {
+            throw BTSerializeError.invalidDataLength
+        }
+
+        // BLE payloads are byte streams; cursor offsets are not guaranteed to be naturally aligned.
+        let encoded: Self = data.withUnsafeBytes { bytes in
+            bytes.loadUnaligned(fromByteOffset: cursor, as: Self.self)
+        }
+        self = Self(littleEndian: encoded)
+        cursor += size
+    }
+
+    func pack(btData data: inout Data) {
+        var value = littleEndian
+        withUnsafeBytes(of: &value) { bytes in
+            data.append(contentsOf: bytes)
+        }
+    }
 }
 
 extension Bool: BTSerializable {
-	public var packedSize: Int {
-		Self.packedSize
-	}
-	
-	public static var packedSize: Int {
-		UInt8.packedSize
-	}
-	
-	public init(unpack data: Data, _ cursor: inout Int) throws {
-		self = try UInt8(unpack: data, &cursor) == 0 ? false : true
-	}
-	
-	public func pack(btData data: inout Data) {
-		UInt8(self ? 1 : 0).pack(btData: &data)
-	}
+    public var packedSize: Int { Self.packedSize }
+    public static var packedSize: Int { UInt8.packedSize }
+
+    public init(unpack data: Data, _ cursor: inout Int) throws {
+        self = try UInt8(unpack: data, &cursor) != 0
+    }
+
+    public func pack(btData data: inout Data) {
+        UInt8(self ? 1 : 0).pack(btData: &data)
+    }
 }
 
-extension IPv4Address : BTSerializable {
-	public init() {
-		self.init("0.0.0.0")!
-	}
-	
-	public var packedSize: Int {
-		IPv4Address.packedSize
-	}
-	
-	public static var packedSize: Int {
-		4
-	}
+extension IPv4Address: BTSerializable {
+    public init() {
+        self.init("0.0.0.0")!
+    }
 
-	public func pack(btData data: inout Data) {
-		data.append(rawValue);
-	}
-	
-	public init(unpack data: Data, _ cursor: inout Int) throws {
-		guard let instance = IPv4Address(data) else {
-			throw BTSerializeError.invalidDataLength
-		}
-		self = instance
-		cursor += packedSize;
-	}
+    public var packedSize: Int { Self.packedSize }
+    public static var packedSize: Int { 4 }
+
+    public func pack(btData data: inout Data) {
+        data.append(rawValue)
+    }
+
+    public init(unpack data: Data, _ cursor: inout Int) throws {
+        let size = Self.packedSize
+        guard cursor >= 0, cursor <= data.count, size <= data.count - cursor else {
+            throw BTSerializeError.invalidDataLength
+        }
+        let bytes = Data(data[cursor..<(cursor + size)])
+        guard let instance = IPv4Address(bytes) else {
+            throw BTSerializeError.invalidDataLength
+        }
+        self = instance
+        cursor += size
+    }
 }
 
 public extension BTUnpackable where Self: RawRepresentable, Self.RawValue: BTUnpackable {
-	init(unpack data: Data, _ cursor: inout Int) throws {
-		let value = try Self.RawValue(unpack: data, &cursor)
-		if let found = Self(rawValue: value) {
-			self = found
-			return
-		}
-		throw BTSerializeError.invalidRawValue
-	}
+    init(unpack data: Data, _ cursor: inout Int) throws {
+        let value = try Self.RawValue(unpack: data, &cursor)
+        guard let found = Self(rawValue: value) else {
+            throw BTSerializeError.invalidRawValue
+        }
+        self = found
+    }
 }
 
 public extension BTPackable where Self: RawRepresentable, Self.RawValue: BTPackable {
-	var packedSize: Int {
-		rawValue.packedSize
-	}
-	
-	func pack(btData data: inout Data) {
-		rawValue.pack(btData: &data)
-	}
+    var packedSize: Int { rawValue.packedSize }
+
+    func pack(btData data: inout Data) {
+        rawValue.pack(btData: &data)
+    }
 }

@@ -1,106 +1,159 @@
 import Network
 import Foundation
+import Observation
 
+/// Bonjour device discovery used alongside BLE discovery.
+///
+/// Browsers are recreated for each scanning session because `NWBrowser.cancel()` is terminal.
+/// All browser and connection callbacks run on the main queue so observable device state has the
+/// same isolation model as the Bluetooth scanners.
+@MainActor
 @Observable
-public class MDNSClient: DeviceScanner {
-	private let browsers: [NWBrowser]
-	private var known: [NWEndpoint: MDNSDevice] = [:] {
-		didSet {
-			devices = known.values.sorted { $0.name < $1.name }
-		}
-	}
+public final class MDNSClient: DeviceScanner {
+    private let services: [String]
+    private var browsers: [String: NWBrowser] = [:]
+    private var endpointsByService: [String: Set<NWEndpoint>] = [:]
+    private var known: [NWEndpoint: MDNSDevice] = [:]
+    private var resolutionConnections: [NWEndpoint: NWConnection] = [:]
 
-	public init(services: [String]) {
-		browsers = services.map { type in
-			let parameters = NWParameters()
-			parameters.includePeerToPeer = true
-			return NWBrowser(for: .bonjour(type: "_\(type)._tcp", domain: nil), using: parameters)
-		}
+    public private(set) var devices: [MDNSDevice] = []
 
-		for browser in browsers {
-			browser.stateUpdateHandler = { [weak self] newState in
-				self?.handleBrowserStateChange(browser: browser, newState: newState)
-			}
-			browser.browseResultsChangedHandler = { [weak self] results, _ in
-				self?.handleBrowseResultsChange(results: results)
-			}
-		}
-	}
+    public init(services: [String]) {
+        self.services = services
+    }
 
-	public var scanning: Bool = false {
-		didSet {
-			scanning ? startScanning() : stopScanning()
-		}
-	}
+    public var scanning = false {
+        didSet {
+            scanning ? startScanning() : stopScanning()
+        }
+    }
 
-	public private(set) var devices: [MDNSDevice] = []
+    private func publishDevices() {
+        devices = known.values.sorted { $0.name < $1.name }
+    }
 
-	private func handleBrowserStateChange(browser: NWBrowser, newState: NWBrowser.State) {
-		//print("Browser \(browser) changed state to: \(newState)")
-	}
+    private func makeBrowser(for service: String) -> NWBrowser {
+        let parameters = NWParameters()
+        parameters.includePeerToPeer = true
+        let browser = NWBrowser(
+            for: .bonjour(type: "_\(service)._tcp", domain: nil),
+            using: parameters
+        )
 
-	private func handleBrowseResultsChange(results: Set<NWBrowser.Result>) {
-		for result in results {
-			if case let .service(name, _, _, _) = result.endpoint {
-				resolveService(endpoint: result.endpoint, name: name)
-			}
-		}
-	}
+        browser.stateUpdateHandler = { _ in }
+        browser.browseResultsChangedHandler = { [weak self] results, _ in
+            MainActor.assumeIsolated {
+                self?.handleBrowseResultsChange(service: service, results: results)
+            }
+        }
+        return browser
+    }
 
-	private func startScanning() {
-		browsers.forEach { $0.start(queue: DispatchQueue.global()) }
-	}
+    private func startScanning() {
+        guard browsers.isEmpty else { return }
+        for service in services {
+            let browser = makeBrowser(for: service)
+            browsers[service] = browser
+            browser.start(queue: .main)
+        }
+    }
 
-	private func stopScanning() {
-		browsers.forEach { $0.cancel() }
-	}
+    private func stopScanning() {
+        for browser in browsers.values {
+            browser.cancel()
+        }
+        browsers.removeAll()
+        endpointsByService.removeAll()
+        known.removeAll()
+        resolutionConnections.values.forEach { $0.cancel() }
+        resolutionConnections.removeAll()
+        publishDevices()
+    }
 
-	private func resolveService(endpoint: NWEndpoint, name: String) {
-		discoverDevice(endpoint: endpoint, name: name, advertisedData: "")
-		let connection = NWConnection(to: endpoint, using: NWParameters())
-		connection.stateUpdateHandler = { [weak self] newState in
-			if case .ready = newState {
-				self?.fetchAdvertisedData(connection: connection, endpoint: endpoint, name: name)
-			}
-		}
-		connection.start(queue: DispatchQueue.global())
-	}
+    private func handleBrowseResultsChange(service: String, results: Set<NWBrowser.Result>) {
+        let endpoints = Set(results.map(\.endpoint))
+        endpointsByService[service] = endpoints
 
-	fileprivate func discoverDevice(endpoint: NWEndpoint, name: String, advertisedData: String) {
-		DispatchQueue.main.async {
-			if let existing = self.known[endpoint] {
-				existing.name = name
-				existing.advertisedData = advertisedData
-			}
-			else {
-				if case let NWEndpoint.service(_, type, _, _) = endpoint {
-					let startIndex = type.index(type.startIndex, offsetBy: 1)
-					let endIndex = type.firstIndex(of: ".")!
-					let service = type[startIndex..<endIndex]
-					let device = MDNSDevice(
-						service: String(service),
-						endpoint: endpoint,
-						name: name)
-					device.advertisedData = advertisedData
-					self.known[endpoint] = device
-				}
-			}
-		}
-	}
-	
-	private func fetchAdvertisedData(connection: NWConnection, endpoint: NWEndpoint, name: String) {
-		connection.receive(minimumIncompleteLength: 0, maximumLength: 1024) { data, _, _, _ in
-			var advertisedData = ""
-			if let data = data, !data.isEmpty {
-				if let text = String(data: data, encoding: .utf8) {
-					advertisedData = text
-				} else {
-					advertisedData = data.map { String(format: "%02x", $0) }
-						.joined(separator: "")
-				}
-			}
-			self.discoverDevice(endpoint: endpoint, name: name, advertisedData: advertisedData)
-			connection.cancel()
-		}
-	}
+        let allVisible = endpointsByService.values.reduce(into: Set<NWEndpoint>()) { partial, set in
+            partial.formUnion(set)
+        }
+        known = known.filter { allVisible.contains($0.key) }
+        for endpoint in Array(resolutionConnections.keys) where !allVisible.contains(endpoint) {
+            resolutionConnections.removeValue(forKey: endpoint)?.cancel()
+        }
+
+        for result in results {
+            guard case let .service(name, _, _, _) = result.endpoint else { continue }
+            resolveService(endpoint: result.endpoint, name: name, service: service)
+        }
+        publishDevices()
+    }
+
+    private func resolveService(endpoint: NWEndpoint, name: String, service: String) {
+        discoverDevice(endpoint: endpoint, name: name, service: service, advertisedData: "")
+
+        guard resolutionConnections[endpoint] == nil else { return }
+
+        let connection = NWConnection(to: endpoint, using: NWParameters())
+        resolutionConnections[endpoint] = connection
+        connection.stateUpdateHandler = { [weak self, weak connection] state in
+            guard let connection else { return }
+            MainActor.assumeIsolated {
+                switch state {
+                case .ready:
+                    self?.fetchAdvertisedData(
+                        connection: connection,
+                        endpoint: endpoint,
+                        name: name,
+                        service: service
+                    )
+                case .failed, .cancelled:
+                    self?.resolutionConnections.removeValue(forKey: endpoint)
+                default:
+                    break
+                }
+            }
+        }
+        connection.start(queue: .main)
+    }
+
+    private func discoverDevice(endpoint: NWEndpoint, name: String, service: String, advertisedData: String) {
+        if let existing = known[endpoint] {
+            existing.name = name
+            existing.advertisedData = advertisedData
+        } else {
+            let device = MDNSDevice(service: service, endpoint: endpoint, name: name)
+            device.advertisedData = advertisedData
+            known[endpoint] = device
+        }
+        publishDevices()
+    }
+
+    private func fetchAdvertisedData(
+        connection: NWConnection,
+        endpoint: NWEndpoint,
+        name: String,
+        service: String
+    ) {
+        connection.receive(minimumIncompleteLength: 0, maximumLength: 1024) { [weak self] data, _, _, _ in
+            let advertisedData: String
+            if let data, !data.isEmpty {
+                advertisedData = String(data: data, encoding: .utf8)
+                    ?? data.map { String(format: "%02x", $0) }.joined()
+            } else {
+                advertisedData = ""
+            }
+
+            MainActor.assumeIsolated {
+                self?.discoverDevice(
+                    endpoint: endpoint,
+                    name: name,
+                    service: service,
+                    advertisedData: advertisedData
+                )
+                self?.resolutionConnections.removeValue(forKey: endpoint)
+            }
+            connection.cancel()
+        }
+    }
 }
