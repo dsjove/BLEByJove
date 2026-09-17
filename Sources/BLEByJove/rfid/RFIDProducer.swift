@@ -56,7 +56,7 @@ public final class RFIDProducer: RFIDProducing {
     }
 
     public func receive(_ detection: RFIDDetection) {
-        received.receiveFeedback(newFeedbackMomento: detection)
+        updateCurrent(for: detection)
     }
 
     private func updateCurrent(for detection: RFIDDetection) {

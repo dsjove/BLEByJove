@@ -20,7 +20,45 @@ public final class RequestThrottler: Sendable {
     public typealias Loader = @Sendable (URLRequest) async throws -> Data
     public typealias Completion = @Sendable (RequestResult) -> Void
 
+    private struct Submission: Sendable {
+        let request: URLRequest
+        let completion: Completion?
+    }
+
+    private final class SubmissionQueue: @unchecked Sendable {
+        private let lock = NSLock()
+        private var submissions: [Submission] = []
+        private var isDraining = false
+
+        func append(_ submission: Submission) -> Bool {
+            lock.lock()
+            defer { lock.unlock() }
+
+            submissions.append(submission)
+
+            guard !isDraining else {
+                return false
+            }
+
+            isDraining = true
+            return true
+        }
+
+        func next() -> Submission? {
+            lock.lock()
+            defer { lock.unlock() }
+
+            guard !submissions.isEmpty else {
+                isDraining = false
+                return nil
+            }
+
+            return submissions.removeFirst()
+        }
+    }
+
     private let state: State
+    private let submissionQueue = SubmissionQueue()
 
     public init(
         minimumInterval: Duration = .seconds(1),
@@ -37,8 +75,22 @@ public final class RequestThrottler: Sendable {
     }
 
     public func sendRequest(request: URLRequest, completion: Completion? = nil) {
+        let submission = Submission(request: request, completion: completion)
+
+        guard submissionQueue.append(submission) else {
+            return
+        }
+
+        let submissionQueue = submissionQueue
+        let state = state
+
         Task {
-            await state.enqueue(request: request, completion: completion)
+            while let submission = submissionQueue.next() {
+                await state.enqueue(
+                    request: submission.request,
+                    completion: submission.completion
+                )
+            }
         }
     }
 
@@ -82,7 +134,8 @@ public final class RequestThrottler: Sendable {
             lastStart = instant
             Task { [loader] in
                 do {
-                    item.completion?(.success(try await loader(item.request)))
+                    let data = try await loader(item.request)
+                    item.completion?(.success(data))
                 } catch {
                     item.completion?(.failure(error))
                 }

@@ -56,11 +56,11 @@ final class BTUARTTests: XCTestCase {
 
         var firstCompleted = false
         var second: Data?
-        uart.call(Data([1]), timeout: 20) { data in
+        uart.call(Data([1]), timeout: 20, response: { data in
             XCTAssertNil(data)
             firstCompleted = true
-        }
-        uart.call(Data([2]), timeout: 500) { second = $0 }
+        })
+        uart.call(Data([2]), timeout: 500, response: { second = $0 })
 
         try await Task.sleep(for: .milliseconds(80))
         XCTAssertTrue(firstCompleted)
@@ -104,6 +104,7 @@ final class BTUARTTests: XCTestCase {
 
         await Task.yield()
         broadcaster.emit(Data([0x42]), on: rx)
-        XCTAssertEqual(await task.value, 0x42)
+        let r = await task.value
+        XCTAssertEqual(r, 0x42)
     }
 }

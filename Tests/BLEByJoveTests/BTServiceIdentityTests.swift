@@ -1,4 +1,5 @@
 import XCTest
+import CoreBluetooth
 @testable import BLEByJove
 
 private struct TestComponent: BTComponent { let rawValue: UInt8 }
@@ -20,15 +21,18 @@ final class BTServiceIdentityTests: XCTestCase {
             name: "Fixture"
         )
 
-        XCTAssertEqual(
-            service.identifier.data,
-            Data([0x11, 0x22, 0x33, 0x44]) + Data(0xA0...0xAB)
+        let expectedServiceIdentifier = CBUUID(
+            data: Data([0x11, 0x22, 0x33, 0x44]) + Data(0xA0...0xAB)
         )
+        XCTAssertEqual(service.identifier, expectedServiceIdentifier)
 
         let changed = characteristic.apply(channel: TestChannel(rawValue: 0x99))
+        let expectedChangedIdentifier = CBUUID(
+            data: Data([0x11, 0x22, 0x33, 0x99]) + Data(0xA0...0xAB)
+        )
         XCTAssertEqual(
-            service.characteristic(characteristic: changed).data,
-            Data([0x11, 0x22, 0x33, 0x99]) + Data(0xA0...0xAB)
+            service.characteristic(characteristic: changed),
+            expectedChangedIdentifier
         )
     }
 }
